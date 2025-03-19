@@ -5,10 +5,12 @@ class DataProcessingPipeline():
         self.df = df
 
     def clean(self):
+        self._drop_rows_with_na_labels()
         self._transform_categorical_features_to_numerical()
         self._extract_time_series_feature_for_city()
         self._transform_into_multi_index()
         self._drop_columns_with_too_many_missing_values()
+        self._drop_unnecessary_columns()
         self._interpolate_missing_values()
         self._transform_label_to_binary()
 
@@ -51,6 +53,15 @@ class DataProcessingPipeline():
         columns_to_drop = missing_fraction[missing_fraction > threshold].index  
         self.df.drop(columns=columns_to_drop, inplace=True)
 
+    def _drop_unnecessary_columns(self):
+        columns_to_drop = ["RainTomorrow"]
+        for col in columns_to_drop:
+            if col in self.df.columns:
+                self.df.drop(columns=columns_to_drop, inplace=True)
+
+    def _drop_rows_with_na_labels(self):
+        self.df.dropna(subset=['RainToday'], inplace=True)
+
     def _interpolate_missing_values(self):
         self.df.interpolate(inplace=True, limit_direction='both')
 
@@ -60,7 +71,6 @@ class DataProcessingPipeline():
         self.df = self.df[first_two_columns + [col for col in self.df.columns if col not in first_two_columns]]
 
     def _transform_categorical_features_to_numerical(self):
-        # TODO RainToday N/A will be transformed into 2?
         cat_columns = ['RainToday', 'Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm']
         existing_columns = [col for col in cat_columns if col in self.df.columns]
 
@@ -72,10 +82,18 @@ class DataProcessingPipeline():
     def _transform_label_to_binary(self):
         pass
 
-df = pd.read_csv('data/train.csv')
+df = pd.read_csv('data/raw-data/train.csv')
 pipeline = DataProcessingPipeline(df)
 pipeline.report()
 pipeline.clean()
 print("\nAfter cleaning ----------------------------------")
 pipeline.report()
 pipeline.export_to_csv('data/processed-data/train.csv')
+
+df = pd.read_csv('data/raw-data/test.csv')
+pipeline = DataProcessingPipeline(df)
+pipeline.report()
+pipeline.clean()
+print("\nAfter cleaning ----------------------------------")
+pipeline.report()
+pipeline.export_to_csv('data/processed-data/test.csv')
