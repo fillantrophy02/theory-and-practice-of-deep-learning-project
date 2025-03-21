@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 class DataProcessingPipeline():
     def __init__(self, df: pd.DataFrame):
@@ -7,6 +8,7 @@ class DataProcessingPipeline():
     def clean(self):
         self._drop_rows_with_na_labels()
         self._transform_categorical_features_to_numerical()
+        self._encode_wind_direction_sin_cos()
         self._extract_time_series_feature_for_city()
         self._transform_into_multi_index()
         self._drop_columns_with_too_many_missing_values()
@@ -71,13 +73,31 @@ class DataProcessingPipeline():
         self.df = self.df[first_two_columns + [col for col in self.df.columns if col not in first_two_columns]]
 
     def _transform_categorical_features_to_numerical(self):
-        cat_columns = ['RainToday', 'Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm']
+        cat_columns = ['RainToday', 'Location']
         existing_columns = [col for col in cat_columns if col in self.df.columns]
 
         if existing_columns:
             for col in existing_columns:
                 self.df[col] = self.df[col].astype('category').cat.codes
                 self.df[col] = self.df[col].replace(-1, self.df[col].max() + 1)  # Replace -1 with the next available number
+        
+    
+    def _encode_wind_direction_sin_cos(self):
+        direction_map = {
+            'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,
+            'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+            'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
+            'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
+        }
+
+        wind_columns = ['WindGustDir', 'WindDir9am', 'WindDir3pm']
+        
+        for col in wind_columns:
+            if col in self.df.columns:
+                radians = self.df[col].map(direction_map).apply(np.deg2rad)
+                self.df[f'{col}_sin'] = np.sin(radians)
+                self.df[f'{col}_cos'] = np.cos(radians)
+                self.df.drop(columns=[col], inplace=True)
 
     def _transform_label_to_binary(self):
         pass
