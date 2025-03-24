@@ -1,12 +1,15 @@
+import csv
 import pandas as pd
 import numpy as np
 
 class DataProcessingPipeline():
     def __init__(self, df: pd.DataFrame):
         self.df = df
+        self.city_code_mappings = self._get_city_code_mappings()
 
     def clean(self):
         self._drop_rows_with_na_labels()
+        self._transform_cities_to_codes()
         self._transform_categorical_features_to_numerical()
         self._encode_wind_direction_sin_cos()
         self._extract_time_series_feature_for_city()
@@ -72,8 +75,17 @@ class DataProcessingPipeline():
         first_two_columns = ['Location', 'Date']    
         self.df = self.df[first_two_columns + [col for col in self.df.columns if col not in first_two_columns]]
 
+    def _get_city_code_mappings(self):
+        with open('data/city_codes.csv') as f:
+            reader = csv.reader(f)
+            next(reader)
+            return dict([[row[0], int(row[1])] for row in reader])
+        
+    def _transform_cities_to_codes(self):
+        self.df['Location'] = self.df['Location'].map(lambda x: self.city_code_mappings[x])
+
     def _transform_categorical_features_to_numerical(self):
-        cat_columns = ['RainToday', 'Location']
+        cat_columns = ['RainToday']
         existing_columns = [col for col in cat_columns if col in self.df.columns]
 
         if existing_columns:
@@ -81,7 +93,6 @@ class DataProcessingPipeline():
                 self.df[col] = self.df[col].astype('category').cat.codes
                 self.df[col] = self.df[col].replace(-1, self.df[col].max() + 1)  # Replace -1 with the next available number
         
-    
     def _encode_wind_direction_sin_cos(self):
         direction_map = {
             'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,

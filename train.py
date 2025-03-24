@@ -6,7 +6,6 @@ from components.data_loader import train_dataloader, test_dataloader, input_size
 from config import device, num_epochs, batch_size, no_of_days
 import numpy as np
 from sklearn.metrics import RocCurveDisplay, confusion_matrix, f1_score, roc_auc_score
-import evaluate
 from torch.utils.data import Dataset, DataLoader
 
 def train_model(model):
