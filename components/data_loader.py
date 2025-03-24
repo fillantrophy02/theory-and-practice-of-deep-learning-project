@@ -77,7 +77,7 @@ class RainDataset(Dataset):
         
     def _split_df_into_sequences(self, df) -> tuple:
         df = df.sort_values(by=['Location', 'Date'])
-        feature_cols = [col for col in df.columns if col not in ['Location', 'Date', 'RainToday']]        
+        feature_cols = [col for col in df.columns if col not in ['Date', 'RainToday']]        
         num_features = len(feature_cols)
         all_x = np.empty((0, self.seq_length, num_features))
         all_y = np.empty((0, 1))
