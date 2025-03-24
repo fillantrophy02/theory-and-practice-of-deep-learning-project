@@ -132,3 +132,5 @@ logs/
 mlruns/
 mlartifacts/
 tmp/
+trainer_output/
+.vscode/
