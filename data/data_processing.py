@@ -1,4 +1,5 @@
 import pandas as pd
+import torch
 
 class DataProcessingPipeline():
     def __init__(self, df: pd.DataFrame):
@@ -82,18 +83,32 @@ class DataProcessingPipeline():
     def _transform_label_to_binary(self):
         pass
 
-df = pd.read_csv('data/raw-data/train.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean()
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/train.csv')
+    def prepare_tensor_data(self):
 
-df = pd.read_csv('data/raw-data/test.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean()
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/test.csv')
+        features_columns = self.df.columns[:-1]
+        target_column = self.df.columns[-1]
+
+        X = self.df[features_columns].values
+        Y = self.df[target_column].values
+
+        X_tensor = torch.tensor(X, dtype=torch.float32)
+        Y_tensor = torch.tensor(Y, dtype=torch.float32)
+
+        return X_tensor, Y_tensor
+
+
+# df = pd.read_csv('data/raw-data/train.csv')
+# pipeline = DataProcessingPipeline(df)
+# pipeline.report()
+# pipeline.clean()
+# print("\nAfter cleaning ----------------------------------")
+# pipeline.report()
+# pipeline.export_to_csv('data/processed-data/train.csv')
+
+# df = pd.read_csv('data/raw-data/test.csv')
+# pipeline = DataProcessingPipeline(df)
+# pipeline.report()
+# pipeline.clean()
+# print("\nAfter cleaning ----------------------------------")
+# pipeline.report()
+# pipeline.export_to_csv('data/processed-data/test.csv')
