@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 import torch
+from components.synthetic_dataset_generator import SyntheticDataset
 from config import *
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
@@ -129,8 +130,10 @@ class RainDataset(Dataset):
 
         return xs, y
     
-train_ds = RainDataset("train", activate_undersampling=True, scaler=None)
-test_ds = RainDataset("test", scaler=train_ds.scaler)
+# train_ds = RainDataset("train", activate_undersampling=True, scaler=None)
+# test_ds = RainDataset("test", scaler=train_ds.scaler)
+train_ds = SyntheticDataset("train")
+test_ds = SyntheticDataset("test")
 print(f"Train: {len(train_ds)} samples, Test: {len(test_ds)} samples.")
 
 torch.manual_seed(24)
