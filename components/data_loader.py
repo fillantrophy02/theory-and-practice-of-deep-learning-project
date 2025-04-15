@@ -5,7 +5,6 @@ import numpy as np
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 import torch
-from components.synthetic_dataset_generator import SyntheticDataset
 from config import *
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
