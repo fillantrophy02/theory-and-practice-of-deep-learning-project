@@ -125,8 +125,7 @@ class RainDataset(Dataset):
     
     def __getitem__(self, index):
         xs = torch.tensor(self.x[index], dtype=torch.float32)
-        #y = torch.tensor(self.y[index], dtype=torch.float32)
-        y = torch.tensor(self.y[index], dtype=torch.long).squeeze(0) 
+        y = torch.tensor(self.y[index], dtype=torch.float32)
 
         return xs, y
     
@@ -141,9 +140,7 @@ test_dataloader = DataLoader(test_ds, batch_size=batch_size, shuffle=True)
 sample_train_features_batch, sample_train_labels_batch = next(iter(train_dataloader))
 feature_batch_size = sample_train_features_batch.size()
 label_batch_size = sample_train_labels_batch.size()
-print(f"Feature batch shape: {feature_batch_size}") # (32, 5, 32)
-print(f"Labels batch shape: {label_batch_size}") # (32, 1)
-
-input_size = feature_batch_size[-1] # aka no. of features
+print(f"Feature batch shape: {feature_batch_size}") # (batch_size, seq_length, num_features)
+print(f"Labels batch shape: {label_batch_size}") # (batch_size, 1)
 
 train_ds.report()
