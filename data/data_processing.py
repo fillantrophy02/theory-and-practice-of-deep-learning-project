@@ -95,6 +95,24 @@ class DataProcessingPipeline():
         Y_tensor = torch.tensor(Y, dtype=torch.float32)
 
         return X_tensor, Y_tensor
+    
+    def create_sequences(self, X, Y, seq_len):
+
+        n_samples = X.shape[0]
+        n_features = X.shape[1]
+        
+        X_seq = []
+        Y_seq = []
+        
+        for i in range(n_samples - seq_len):
+            X_seq.append(X[i:i+seq_len])
+            Y_seq.append(Y[i:i+seq_len])
+        
+        X_seq = torch.stack(X_seq)
+        Y_seq = torch.stack(Y_seq)
+        
+        return X_seq, Y_seq
+
 
 
 # df = pd.read_csv('data/raw-data/train.csv')

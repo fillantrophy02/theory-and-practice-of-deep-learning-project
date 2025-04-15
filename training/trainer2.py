@@ -7,16 +7,12 @@ from config.config import CONFIG
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'], learning_rate=CONFIG['learning_rate']):
-
+def train_model2(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'], learning_rate=CONFIG['learning_rate']):
     # Defining the Loss Function + Optimizer used
-    ## Loss --> BCE
-    ## Optimizer --> Adam
-
     criterion = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
-    # Create Mini Batch Data.
+    # Create Mini Batch Data
     dataset = torch.utils.data.TensorDataset(X_train, Y_train)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -24,36 +20,28 @@ def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_
     train_accuracies = []
     
     for epoch in range(num_epochs):
-
         model.train() 
         total_loss = 0
         correct = 0
         total = 0
         
         for X_batch, Y_batch in dataloader:
-
             optimizer.zero_grad()
 
-            # Move to GPU if have.
             X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
 
-            # Forward pass
-            predictions = model(X_batch)[2]
+            # Forward pass 
+            _, _, predictions = model(X_batch)
             
-            # Compute loss
-            loss = criterion(predictions.squeeze(), Y_batch)
+            loss = criterion(predictions.squeeze(-1), Y_batch.squeeze(-1))
             total_loss += loss.item()
             
-            # Accuracy Calculation
-            probs = torch.sigmoid(predictions.squeeze())
-
-            # OWN DEFINITION: if probability > 0.5 , gives a value of 1. This means it will RAIN.
+            probs = torch.sigmoid(predictions.squeeze(-1))
             predicted_labels = (probs >= 0.5).float()
+            
+            correct += (predicted_labels == Y_batch.squeeze(-1)).sum().item()
+            total += Y_batch.numel()  # Total number of elements in Y_batch
 
-            correct += (predicted_labels == Y_batch).sum().item()
-            total += Y_batch.size(0)
-
-            # Backpropagation
             loss.backward()
             optimizer.step()
         
@@ -63,11 +51,10 @@ def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_
         train_losses.append(avg_loss)
         train_accuracies.append(accuracy)
         
-        print(f"Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}, Accuracy: {correct/total:.4f}")
+        print(f"Epoch {epoch+1}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}")
         
         torch.save(model.state_dict(), 'model2_weights.pth')
     
-    # Plotting after training
     plt.figure(figsize=(12, 5))
 
     # Loss Plot
@@ -90,4 +77,3 @@ def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_
 
     plt.tight_layout()
     plt.show()
-
