@@ -9,6 +9,7 @@ no_of_days = 10
 num_features = 19
 
 embed_dim = 16 # embedding dim
+d_model = embed_dim
 seq_length = no_of_days
 nhead = 4 # no. of heads
 num_encoder_layers = 6
