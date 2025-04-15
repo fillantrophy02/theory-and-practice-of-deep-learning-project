@@ -8,9 +8,9 @@ import pandas as pd
 # Hidden_Size : 64
 # Output_Size: 1
 
-class LSTM(torch.nn.Module):
+class LSTM_OneStep(torch.nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(LSTM, self).__init__()
+        super(LSTM_OneStep, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
