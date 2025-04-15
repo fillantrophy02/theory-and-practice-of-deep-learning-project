@@ -130,10 +130,8 @@ class RainDataset(Dataset):
 
         return xs, y
     
-# train_ds = RainDataset("train", activate_undersampling=True, scaler=None)
-# test_ds = RainDataset("test", scaler=train_ds.scaler)
-train_ds = SyntheticDataset("train")
-test_ds = SyntheticDataset("test")
+train_ds = RainDataset("train", activate_undersampling=True, scaler=None)
+test_ds = RainDataset("test", scaler=train_ds.scaler)
 print(f"Train: {len(train_ds)} samples, Test: {len(test_ds)} samples.")
 
 torch.manual_seed(24)
