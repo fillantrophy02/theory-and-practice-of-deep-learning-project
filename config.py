@@ -3,10 +3,12 @@ import torch
 debug_mode = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-batch_size = 256
-num_epochs = 30
+train_split = 0.8
+val_split = 0.2
+batch_size = 1024
+num_epochs = 200
 no_of_days = 10
-num_features = 19
+num_features = 20
 
 embed_dim = 16 # embedding dim
 d_model = embed_dim

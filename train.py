@@ -6,10 +6,11 @@ from components.data_loader import train_dataloader
 from components.experiment_recorder import log_model_artifacts, log_model_metric
 from config import *
 from models.transformer import TransformerForClassification
-from test import test_model
+from eval import evaluate_model
 
 def train_model(model):
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    model.train()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     metrics = {
         "auc": torchmetrics.AUROC('binary').to(device),
         "f1_score": torchmetrics.F1Score('binary').to(device),
@@ -31,9 +32,7 @@ def train_model(model):
             # Forward pass
             pred = model(inputs_re) # (batch_size, target_seq_length, 1)
             loss = model.loss(pred.float(), outputs_re.float())
-            # for step in range(target_seq_length):
-            #     loss = model.loss(pred[:, step, :].float(), outputs_re[:, step, :].float())
-            
+
             # Compute metrics
             for name in metrics:
                 for step in range(target_seq_length):
@@ -57,9 +56,11 @@ def train_model(model):
 
             metrics[name].reset()
 
+        evaluate_model(model, epoch=epoch)
+
 if __name__ == '__main__':
     model = TransformerForClassification().to(device)
     train_model(model)
     log_model_artifacts(model)
     torch.save(model.state_dict(), "ckpts/model.pth")
-    test_model(model)
+    # evaluate_model(model)

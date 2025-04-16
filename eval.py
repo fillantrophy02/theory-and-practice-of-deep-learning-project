@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torchmetrics
-from components.data_loader import train_dataloader, test_dataloader
+from components.data_loader import train_dataloader, test_dataloader, val_dataloader
 from components.experiment_recorder import log_model_metric
 from components.metrics import calculate_cm_metrics, plot_and_save_auc_curve, report
 from config import *
@@ -9,21 +9,21 @@ from transformers import PatchTSTConfig, PatchTSTForClassification, EarlyStoppin
 
 from models.transformer import TransformerForClassification
 
-def test_model(model, epoch=num_epochs-1):
+def evaluate_model(model, epoch=num_epochs-1):
     model.eval()
 
     metrics = {
-        "test_auc": torchmetrics.AUROC('binary').to(device),
-        "test_f1_score": torchmetrics.F1Score('binary').to(device),
-        "test_accuracy": torchmetrics.Accuracy('binary').to(device)
+        "val_auc": torchmetrics.AUROC('binary').to(device),
+        "val_f1_score": torchmetrics.F1Score('binary').to(device),
+        "val_accuracy": torchmetrics.Accuracy('binary').to(device)
     }
 
     with torch.no_grad():
         labels, preds, = [], []
         all_losses = []
-        print("\nTest", end = '    ')
+        print("\nVal", end = '    ')
 
-        for batch in test_dataloader:
+        for batch in val_dataloader:
             inputs_batch, outputs_batch = batch
             inputs_re = inputs_batch.to(device)
             outputs_re = outputs_batch.to(device)
@@ -42,7 +42,7 @@ def test_model(model, epoch=num_epochs-1):
             all_losses.append(loss.item())
     
         avg_loss = sum(all_losses) / len(all_losses)
-        log_model_metric("test_loss", avg_loss, epoch)
+        log_model_metric("val_loss", avg_loss, epoch)
         print(f'Loss: {avg_loss:.3f}', end = '    ')
 
         for name in metrics:
@@ -58,4 +58,4 @@ def test_model(model, epoch=num_epochs-1):
 if __name__ == '__main__':
     model = TransformerForClassification.to(device)
     model.load_state_dict(torch.load("ckpts/model.pth"))
-    test_model(model)
+    evaluate_model(model)

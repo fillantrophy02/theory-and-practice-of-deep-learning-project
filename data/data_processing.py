@@ -59,13 +59,13 @@ class DataProcessingPipeline():
         self.df.drop(columns=columns_to_drop, inplace=True)
 
     def _drop_unnecessary_columns(self):
-        columns_to_drop = ["RainTomorrow"]
+        columns_to_drop = []
         for col in columns_to_drop:
             if col in self.df.columns:
                 self.df.drop(columns=columns_to_drop, inplace=True)
 
     def _drop_rows_with_na_labels(self):
-        self.df.dropna(subset=['RainToday'], inplace=True)
+        self.df.dropna(subset=['RainTomorrow'], inplace=True)
 
     def _interpolate_missing_values(self):
         self.df.interpolate(inplace=True, limit_direction='both')
