@@ -17,10 +17,16 @@ class TransformerForClassification(nn.Module):
             dim_feedforward=dim_feedforward,
             batch_first=True
         )
+        self.decoder1 = nn.TransformerDecoderLayer(
+            d_model=embed_dim,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            batch_first=True
+        )
         self.linear1 = nn.Linear(num_features, embed_dim)
         self.linear2 = nn.Linear(embed_dim, 1)
         self.sigmoid = nn.Sigmoid()
-        self.loss = nn.BCELoss()
+        self.loss = nn.MSELoss()
 
     def forward(self, x):
         # x: (batch_size, input_seq_length, num_features)
@@ -30,11 +36,16 @@ class TransformerForClassification(nn.Module):
         x = self.linear1(x)
         # src: (batch_size, input_seq_length, embed_dim),
         # need to apply transformer(src)
-        x = self.encoder1(x) 
-        x = self.encoder2(x)
-        # x:  (batch_size, input_seq_length, embed_dim)
-        x = x[:, -1, :]
-        # x: (batch_size, embed_dim)
-        x = self.linear2(x)
-        x = self.sigmoid(x)
-        return x
+        memory = self.encoder1(x) 
+        memory = self.encoder2(memory) #(batch_size, input_seq_length, embed_dim)
+
+        out_embeddings = torch.empty(x.size()[0], 0, embed_dim).to(device)
+        tgt = x[:, -1:, :] # (batch_size, 1, embed_dim)
+        for t in range(target_seq_length):
+            decoded = self.decoder1(tgt, memory) # (batch_size, 1, embed_dim)
+            out_embeddings = torch.cat((out_embeddings, decoded), dim=1)
+            tgt = decoded # this becomes decoder input for next time step
+
+        out = self.linear2(out_embeddings) # (batch_size, target_seq_length, 1)
+        out = self.sigmoid(out)
+        return out

@@ -27,12 +27,13 @@ def train_model(model):
             outputs_re = outputs_batch.to(device)
             
             # Forward pass
-            pred = model(inputs_re)
+            pred = model(inputs_re) # (batch_size, target_seq_length, 1)
             loss = model.loss(pred.float(), outputs_re.float())
             
             # Compute metrics
             for name in metrics:
-                metrics[name](pred, outputs_re)
+                for step in range(target_seq_length):
+                    metrics[name](pred[:, step, :], outputs_re[:, step, :])
         
             # Backward pass and optimization
             loss.backward()
