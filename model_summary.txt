@@ -1,22 +1,26 @@
 TransformerForClassification(
-  (encoder1): TransformerEncoderLayer(
-    (self_attn): MultiheadAttention(
-      (out_proj): NonDynamicallyQuantizableLinear(in_features=16, out_features=16, bias=True)
+  (encoder1): EncoderLayer(
+    (attn): SelfAttentionLayer(
+      (query): Linear(in_features=16, out_features=16, bias=True)
+      (key): Linear(in_features=16, out_features=16, bias=True)
+      (value): Linear(in_features=16, out_features=16, bias=True)
+      (product): Linear(in_features=10, out_features=10, bias=True)
     )
     (linear1): Linear(in_features=16, out_features=512, bias=True)
-    (dropout): Dropout(p=0.1, inplace=False)
     (linear2): Linear(in_features=512, out_features=16, bias=True)
     (norm1): LayerNorm((16,), eps=1e-05, elementwise_affine=True)
     (norm2): LayerNorm((16,), eps=1e-05, elementwise_affine=True)
     (dropout1): Dropout(p=0.1, inplace=False)
     (dropout2): Dropout(p=0.1, inplace=False)
   )
-  (encoder2): TransformerEncoderLayer(
-    (self_attn): MultiheadAttention(
-      (out_proj): NonDynamicallyQuantizableLinear(in_features=16, out_features=16, bias=True)
+  (encoder2): EncoderLayer(
+    (attn): SelfAttentionLayer(
+      (query): Linear(in_features=16, out_features=16, bias=True)
+      (key): Linear(in_features=16, out_features=16, bias=True)
+      (value): Linear(in_features=16, out_features=16, bias=True)
+      (product): Linear(in_features=10, out_features=10, bias=True)
     )
     (linear1): Linear(in_features=16, out_features=512, bias=True)
-    (dropout): Dropout(p=0.1, inplace=False)
     (linear2): Linear(in_features=512, out_features=16, bias=True)
     (norm1): LayerNorm((16,), eps=1e-05, elementwise_affine=True)
     (norm2): LayerNorm((16,), eps=1e-05, elementwise_affine=True)

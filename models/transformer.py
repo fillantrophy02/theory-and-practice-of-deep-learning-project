@@ -10,15 +10,18 @@ class SelfAttentionLayer(nn.Module):
         self.query = nn.Linear(embed_dim, embed_dim)
         self.key = nn.Linear(embed_dim, embed_dim)
         self.value = nn.Linear(embed_dim, embed_dim)
+        self.product = nn.Linear(seq_length, seq_length)
 
     def forward(self, x): # (n, s, e)
         batch_size = x.size(0)
         query = self.query(x).view(batch_size, -1, embed_dim) # (n, s, e)
         key = self.key(x).view(batch_size, -1, embed_dim) # (n, s, e)
-        # replace 'value' by 'x' itself
-        product = torch.bmm(query, key.transpose(1, 2))/(embed_dim**0.5) # (n, e, e)
-        attention_weights = F.softmax(product, dim = 2) # (n, e, e)
-        out = torch.bmm(attention_weights, x) # (n, s, e)
+        value = self.value(x).view(batch_size, -1, embed_dim) # (n, s, e)
+
+        product = torch.bmm(query, key.transpose(1, 2))/(embed_dim**0.5) # (n, s, s)
+        product = self.product(product)
+        attention_weights = F.softmax(product, dim = 2) # (n, s, s)
+        out = torch.bmm(attention_weights, value) # (n, s, e)
         return out
     
 class EncoderLayer(nn.Module):
