@@ -43,5 +43,5 @@ TransformerForClassification(
   (linear1): Linear(in_features=19, out_features=16, bias=True)
   (linear2): Linear(in_features=16, out_features=1, bias=True)
   (sigmoid): Sigmoid()
-  (loss): MSELoss()
+  (loss): BCELoss()
 )
