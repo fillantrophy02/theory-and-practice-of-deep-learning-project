@@ -44,7 +44,7 @@ class DataframeLoader():
                 all_x = np.concatenate((all_x, x_data), axis=0)
                 all_y = np.concatenate((all_y, y_data), axis=0)
 
-        return all_x, all_y    
+        return all_x, all_y
     
     def split_df_into_sequences_without_labels(self) -> pd.DataFrame:
         self.df = self.df.sort_values(by=['Location', 'Date'])
