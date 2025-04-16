@@ -26,7 +26,7 @@ class TransformerForClassification(nn.Module):
         self.linear1 = nn.Linear(num_features, embed_dim)
         self.linear2 = nn.Linear(embed_dim, 1)
         self.sigmoid = nn.Sigmoid()
-        self.loss = nn.MSELoss()
+        self.loss = nn.BCELoss()
 
     def forward(self, x):
         # x: (batch_size, input_seq_length, num_features)

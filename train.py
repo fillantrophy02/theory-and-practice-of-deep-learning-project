@@ -28,7 +28,8 @@ def train_model(model):
             
             # Forward pass
             pred = model(inputs_re) # (batch_size, target_seq_length, 1)
-            loss = model.loss(pred.float(), outputs_re.float())
+            for step in range(target_seq_length):
+                loss = model.loss(pred[:, step, :].float(), outputs_re[:, step, :].float())
             
             # Compute metrics
             for name in metrics:
