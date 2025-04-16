@@ -29,8 +29,6 @@ class SplitDataset():
 class RainDataset(Dataset):
     def __init__(self, split: str = "train", activate_undersampling: bool = True, enable_normalization: bool = True, scaler: MinMaxScaler = None):
         self.split_sleep_ds = SplitDataset()
-
-        self.seq_length = no_of_days
         self.split = split
         self.scaler = scaler
         
@@ -79,31 +77,28 @@ class RainDataset(Dataset):
         df = df.sort_values(by=['Location', 'Date'])
         feature_cols = [col for col in df.columns if col not in ['Date', 'RainToday']]        
         num_features = len(feature_cols)
-        all_x = np.empty((0, self.seq_length, num_features))
-        all_y = np.empty((0, 1))
+        all_x = np.empty((0, seq_length, num_features))
+        all_y = np.empty((0, target_seq_length, 1))
 
         for _, group in df.groupby('Location'):
             group = group.set_index('Date')  # Set date as index
             values = group[feature_cols + ['RainToday']].to_numpy()
 
-            if len(values) >= self.seq_length:
-                x_data = np.lib.stride_tricks.sliding_window_view(values[:, :-1], self.seq_length, axis=0)  # (N, seq_length, num_features)
-                x_data = np.transpose(x_data, (0, 2, 1))  # (N, num_features, seq_length)
-                y_data = np.expand_dims(values[self.seq_length - 1:, -1], axis=1)
+            if len(values) >= (seq_length + target_seq_length):
+                all_data = np.lib.stride_tricks.sliding_window_view(values, seq_length + target_seq_length - 1, axis=0)  # (N, num_features, seq_length+target_seq-1)
+                all_data = np.transpose(all_data, (0, 2, 1)) # (N, seq_length+target_seq-1, num_features)
+                x_data = all_data[:, 0:seq_length, :-1] # (N, seq_length, num_features)
+                y_data = all_data[:, seq_length-1:, -1:] # (N, target_seq_length, 1)
 
                 all_x = np.concatenate((all_x, x_data), axis=0)
                 all_y = np.concatenate((all_y, y_data), axis=0)
 
         return all_x, all_y
     
-    def _transform_into_one_hot_encoding(self):
-        self.y = self.y.astype(int)
-        self.y = np.eye(2)[self.y.flatten()]
-    
     def _undersample(self):
         """Reduce majority class (label 0) to match the count of the minority class (label 1)."""
-        indices_label_0 = np.where(self.y == 0)[0]
-        indices_label_1 = np.where(self.y == 1)[0]
+        indices_label_0 = np.where(self.y[:, 0, :] == 0)[0]
+        indices_label_1 = np.where(self.y[:, 0, :] == 1)[0]
 
         num_label_1 = len(indices_label_1)
         sampled_indices_0 = np.random.choice(indices_label_0, size=num_label_1, replace=False)
@@ -114,8 +109,8 @@ class RainDataset(Dataset):
 
     
     def report(self):
-        num_label_0 = (self.y == 0).sum()
-        num_label_1 = (self.y == 1).sum()
+        num_label_0 = (self.y[:, 0, :] == 0).sum() # only consider 'today' for label
+        num_label_1 = (self.y[:, 0, :] == 1).sum()
         print(f"\n------ Stats for {self.split} --------")
         print(f"Number of samples with label 0: {num_label_0}")
         print(f"Number of samples with label 1: {num_label_1}")
@@ -141,6 +136,6 @@ sample_train_features_batch, sample_train_labels_batch = next(iter(train_dataloa
 feature_batch_size = sample_train_features_batch.size()
 label_batch_size = sample_train_labels_batch.size()
 print(f"Feature batch shape: {feature_batch_size}") # (batch_size, seq_length, num_features)
-print(f"Labels batch shape: {label_batch_size}") # (batch_size, 1)
+print(f"Labels batch shape: {label_batch_size}") # (batch_size, target_seq_length, 1)
 
 train_ds.report()
