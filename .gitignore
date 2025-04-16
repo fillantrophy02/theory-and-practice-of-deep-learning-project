@@ -134,3 +134,4 @@ mlartifacts/
 tmp/
 trainer_output/
 .vscode/
+visualizations/
