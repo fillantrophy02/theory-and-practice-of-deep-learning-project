@@ -10,7 +10,6 @@ class SelfAttentionLayer(nn.Module):
         self.query = nn.Linear(embed_dim, embed_dim)
         self.key = nn.Linear(embed_dim, embed_dim)
         self.value = nn.Linear(embed_dim, embed_dim)
-        self.product = nn.Linear(seq_length, seq_length)
 
     def forward(self, x): # (n, s, e)
         batch_size = x.size(0)
@@ -18,8 +17,7 @@ class SelfAttentionLayer(nn.Module):
         key = self.key(x).view(batch_size, -1, embed_dim) # (n, s, e)
         value = self.value(x).view(batch_size, -1, embed_dim) # (n, s, e)
 
-        product = torch.bmm(query, key.transpose(1, 2))/(embed_dim**0.5) # (n, s, s)
-        product = self.product(product)
+        product = torch.bmm(query, query.transpose(1, 2))/(embed_dim**0.5) # (n, s, s)
         attention_weights = F.softmax(product, dim = 2) # (n, s, s)
         out = torch.bmm(attention_weights, value) # (n, s, e)
         return out
@@ -51,18 +49,8 @@ class EncoderLayer(nn.Module):
 class TransformerForClassification(nn.Module):
     def __init__(self):
         super().__init__()
-        self.encoder1 = nn.TransformerEncoderLayer(
-            d_model=embed_dim,
-            nhead=nhead,
-            dim_feedforward=dim_feedforward,
-            batch_first=True
-        )
-        self.encoder2 = nn.TransformerEncoderLayer(
-            d_model=embed_dim,
-            nhead=nhead,
-            dim_feedforward=dim_feedforward,
-            batch_first=True
-        )
+        self.encoder1 = EncoderLayer()
+        self.encoder2 = EncoderLayer()
         self.decoder1 = nn.TransformerDecoderLayer(
             d_model=embed_dim,
             nhead=nhead,

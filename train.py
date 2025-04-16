@@ -19,6 +19,8 @@ def train_model(model):
     for epoch in range(num_epochs):
         print(f'\nEpoch [{epoch+1}/{num_epochs}]', end = ' ')
 
+        all_losses = []
+
         for batch in train_dataloader:
             optimizer.zero_grad()
 
@@ -28,8 +30,9 @@ def train_model(model):
             
             # Forward pass
             pred = model(inputs_re) # (batch_size, target_seq_length, 1)
-            for step in range(target_seq_length):
-                loss = model.loss(pred[:, step, :].float(), outputs_re[:, step, :].float())
+            loss = model.loss(pred.float(), outputs_re.float())
+            # for step in range(target_seq_length):
+            #     loss = model.loss(pred[:, step, :].float(), outputs_re[:, step, :].float())
             
             # Compute metrics
             for name in metrics:
@@ -40,8 +43,11 @@ def train_model(model):
             loss.backward()
             optimizer.step()
 
-        log_model_metric("loss", loss, epoch)
-        print(f'Loss: {loss.item():.3f}', end = '    ')
+            all_losses.append(loss.item())
+
+        avg_loss = sum(all_losses) / len(all_losses)
+        print(f'Loss: {avg_loss:.3f}', end = '    ')
+        log_model_metric("loss", avg_loss, epoch)
 
         for name in metrics:
             value = metrics[name].compute().item()

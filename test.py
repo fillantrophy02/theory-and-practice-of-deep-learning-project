@@ -20,6 +20,7 @@ def test_model(model, epoch=num_epochs-1):
 
     with torch.no_grad():
         labels, preds, = [], []
+        all_losses = []
         print("\nTest", end = '    ')
 
         for batch in test_dataloader:
@@ -37,9 +38,12 @@ def test_model(model, epoch=num_epochs-1):
             # Compute metrics
             for name in metrics:
                 metrics[name](pred, outputs_re)
+
+            all_losses.append(loss.item())
     
-        log_model_metric("test_loss", loss, epoch)
-        print(f'Loss: {loss.item():.3f}', end = '    ')
+        avg_loss = sum(all_losses) / len(all_losses)
+        log_model_metric("test_loss", avg_loss, epoch)
+        print(f'Loss: {avg_loss:.3f}', end = '    ')
 
         for name in metrics:
             value = metrics[name].compute().item()

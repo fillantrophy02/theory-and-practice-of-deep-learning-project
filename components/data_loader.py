@@ -85,10 +85,10 @@ class RainDataset(Dataset):
             values = group[feature_cols + ['RainToday']].to_numpy()
 
             if len(values) >= (seq_length + target_seq_length):
-                all_data = np.lib.stride_tricks.sliding_window_view(values, seq_length + target_seq_length - 1, axis=0)  # (N, num_features, seq_length+target_seq-1)
+                all_data = np.lib.stride_tricks.sliding_window_view(values, seq_length + target_seq_length, axis=0)  # (N, num_features, seq_length+target_seq-1)
                 all_data = np.transpose(all_data, (0, 2, 1)) # (N, seq_length+target_seq-1, num_features)
                 x_data = all_data[:, 0:seq_length, :-1] # (N, seq_length, num_features)
-                y_data = all_data[:, seq_length-1:, -1:] # (N, target_seq_length, 1)
+                y_data = all_data[:, seq_length:, -1:] # (N, target_seq_length, 1)
 
                 all_x = np.concatenate((all_x, x_data), axis=0)
                 all_y = np.concatenate((all_y, y_data), axis=0)
