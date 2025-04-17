@@ -5,9 +5,9 @@ debug_mode = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_split = 0.8
 val_split = 0.2
-batch_size = 1024
+batch_size = 512
 num_epochs = 200
-no_of_days = 10
+no_of_days = 21
 num_features = 20
 
 embed_dim = 16 # embedding dim

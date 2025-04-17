@@ -1,3 +1,5 @@
+import math
+import numpy as np
 import torch
 from torch import nn
 from config import *
@@ -45,6 +47,64 @@ class EncoderLayer(nn.Module):
         x = self.norm2(x + self._ff_block(x))
 
         return x
+    
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000, batch_first: bool = False):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        self.batch_first = batch_first
+
+        position = torch.arange(max_len).unsqueeze(1)  # [max_len, 1]
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))  # [d_model/2]
+        pe = torch.zeros(max_len, d_model)  # [max_len, d_model]
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(1)  # [max_len, 1, d_model]
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]`` or ``[batch_size, seq_len, embedding_dim]`` if batch_first=True
+        """
+        if self.batch_first:
+            seq_len = x.size(1)
+            x = x + self.pe[:seq_len].transpose(0, 1)  # [1, seq_len, d_model]
+        else:
+            seq_len = x.size(0)
+            x = x + self.pe[:seq_len]  # [seq_len, 1, d_model]
+        return self.dropout(x)
+    
+# Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Informer
+class InformerSinusoidalPositionalEmbedding(nn.Embedding):
+    """This module produces sinusoidal positional embeddings of any length."""
+
+    def __init__(self, num_positions: int, embedding_dim: int) -> None:
+        super().__init__(num_positions, embedding_dim)
+
+    def _init_weight(self):
+        """
+        Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
+        the 2nd half of the vector. [dim // 2:]
+        """
+        n_pos, dim = self.weight.shape
+        position_enc = np.array(
+            [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)]
+        )
+        out = torch.empty(n_pos, dim, dtype=self.weight.dtype, requires_grad=False, device=device)
+        sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
+        out[:, 0:sentinel] = torch.FloatTensor(np.sin(position_enc[:, 0::2]), device=device)
+        out[:, sentinel:] = torch.FloatTensor(np.cos(position_enc[:, 1::2]), device=device)
+        self.weight = nn.Parameter(out, requires_grad=False)
+
+    @torch.no_grad()
+    def forward(self, input_ids_shape: torch.Size, past_key_values_length: int = 0) -> torch.Tensor:
+        """`input_ids_shape` is expected to be [bsz x seqlen]."""
+        bsz, seq_len = input_ids_shape[:2]
+        positions = torch.arange(
+            past_key_values_length, past_key_values_length + seq_len, dtype=torch.long, device=device
+        )
+        return super().forward(positions)
 
 class TransformerForClassification(nn.Module):
     def __init__(self):
@@ -61,6 +121,7 @@ class TransformerForClassification(nn.Module):
         self.decoder4 = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, dropout=0.5)
         self.decoder5 = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, dropout=0.5)
         self.decoder6 = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, dropout=0.5)
+        self.position = InformerSinusoidalPositionalEmbedding(seq_length, embed_dim)
         self.linear1 = nn.Linear(num_features, embed_dim)
         self.linear2 = nn.Linear(embed_dim, 1)
         self.sigmoid = nn.Sigmoid()
@@ -73,24 +134,31 @@ class TransformerForClassification(nn.Module):
         # and our num_features is unfortunately 19
         # need to resize first
         x = self.dropout(self.linear1(x))
+
+        pos_embeds = self.position(x.size(), seq_length)# (input_seq_length, embed_dim)
+        pos_embeds = pos_embeds.expand(x.size())
+        print(pos_embeds.shape)
+        x = torch.add(x, pos_embeds)
+        print(x.shape)
+        
         # src: (batch_size, input_seq_length, embed_dim),
         # need to apply transformer(src)
-        memory = self.encoder1(x) 
+        memory = self.encoder1(x)
         memory = self.encoder2(memory) # (batch_size, input_seq_length, embed_dim)
-        memory = self.encoder3(memory) # (batch_size, input_seq_length, embed_dim)
-        memory = self.encoder4(memory) # (batch_size, input_seq_length, embed_dim)
-        memory = self.encoder5(memory) # (batch_size, input_seq_length, embed_dim)
-        memory = self.encoder6(memory) # (batch_size, input_seq_length, embed_dim)
+        # memory = self.encoder3(memory) # (batch_size, input_seq_length, embed_dim)
+        # memory = self.encoder4(memory) # (batch_size, input_seq_length, embed_dim)
+        # memory = self.encoder5(memory) # (batch_size, input_seq_length, embed_dim)
+        # memory = self.encoder6(memory) # (batch_size, input_seq_length, embed_dim)
 
         out_embeddings = torch.empty(x.size()[0], 0, embed_dim).to(device)
         tgt = x[:, -1:, :] # (batch_size, 1, embed_dim)
         for t in range(target_seq_length):
             tgt = self.decoder1(tgt, memory) # (batch_size, 1, embed_dim)
             tgt = self.decoder2(tgt, memory) # (batch_size, 1, embed_dim)
-            tgt = self.decoder3(tgt, memory) # (batch_size, 1, embed_dim)
-            tgt = self.decoder4(tgt, memory) # (batch_size, 1, embed_dim)
-            tgt = self.decoder5(tgt, memory) # (batch_size, 1, embed_dim)
-            tgt = self.decoder6(tgt, memory) # (batch_size, 1, embed_dim)
+            # tgt = self.decoder3(tgt, memory) # (batch_size, 1, embed_dim)
+            # tgt = self.decoder4(tgt, memory) # (batch_size, 1, embed_dim)
+            # tgt = self.decoder5(tgt, memory) # (batch_size, 1, embed_dim)
+            # tgt = self.decoder6(tgt, memory) # (batch_size, 1, embed_dim)
             out_embeddings = torch.cat((out_embeddings, tgt), dim=1)
 
         out_embeddings = out_embeddings[:, -1:, :] # memory[:, -1:, :]
