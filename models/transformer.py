@@ -123,7 +123,10 @@ class TransformerForClassification(nn.Module):
         self.decoder6 = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, dropout=0.5)
         # self.position = InformerSinusoidalPositionalEmbedding(seq_length, embed_dim)
         self.linear1 = nn.Linear(num_features, embed_dim)
-        self.linear2 = nn.Linear(embed_dim, 1)
+        self.linear2 = nn.Linear(embed_dim, 512)
+        self.linear3 = nn.Linear(512, 256)
+        self.linear4 = nn.Linear(256, 1)
+        self.activation = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
         self.dropout = nn.Dropout()
         self.loss = nn.BCELoss()
@@ -157,5 +160,9 @@ class TransformerForClassification(nn.Module):
 
         out_embeddings = memory[:, -1:, :]
         out = self.linear2(out_embeddings) # (batch_size, 1, 1)
+        out = self.activation(out)
+        out = self.linear3(out)
+        out = self.activation(out)
+        out = self.linear4(out)
         out = self.sigmoid(out)
         return out
