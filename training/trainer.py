@@ -8,6 +8,8 @@ from config.config import CONFIG
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'], learning_rate=CONFIG['learning_rate']):
+    losses = []
+    accuracies = []
 
     # Defining the Loss Function + Optimizer used
     ## Loss --> BCE
@@ -33,12 +35,14 @@ def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_
 
             # Move to GPU if have.
             X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
+            
 
             # Forward pass
-            predictions = model(X_batch)[2]
+            hidden = torch.zeros(X_batch.size(0), model.hidden_size).to(device)
+            _, predictions = model(X_batch, hidden)
             
             # Compute loss
-            loss = criterion(predictions.squeeze(), Y_batch)
+            loss = criterion(predictions, Y_batch)
             total_loss += loss.item()
             
             # Accuracy Calculation
@@ -54,6 +58,13 @@ def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_
             loss.backward()
             optimizer.step()
         
-        print(f"Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}, Accuracy: {correct/total:.4f}")
+        epoch_loss = total_loss / len(dataloader)
+        epoch_accuracy = correct / total
+        losses.append(epoch_loss)
+        accuracies.append(epoch_accuracy)
+
+        print(f"Epoch {epoch+1}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_accuracy:.4f}")
+
         
         torch.save(model.state_dict(), 'model_weights.pth')
+    return losses, accuracies
