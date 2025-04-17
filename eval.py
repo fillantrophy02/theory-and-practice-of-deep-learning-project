@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torchmetrics
-from components.data_loader import train_dataloader, test_dataloader, val_dataloader
+from components.data_loader import val_dataloader
 from components.experiment_recorder import log_model_metric
 from components.metrics import calculate_cm_metrics, plot_and_save_auc_curve, report
 from config import *

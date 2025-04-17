@@ -9,7 +9,6 @@ from models.transformer import TransformerForClassification
 from eval import evaluate_model
 
 def train_model(model):
-    model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     metrics = {
         "auc": torchmetrics.AUROC('binary').to(device),
@@ -18,6 +17,7 @@ def train_model(model):
     }
 
     for epoch in range(num_epochs):
+        model.train()
         print(f'\nEpoch [{epoch+1}/{num_epochs}]', end = ' ')
 
         all_losses = []

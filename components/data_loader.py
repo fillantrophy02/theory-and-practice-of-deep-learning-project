@@ -26,20 +26,20 @@ class DataframeLoader():
     
     def split_df_into_sequences_with_labels(self) -> tuple:
         self.df = self.df.sort_values(by=['Location', 'Date'])
-        feature_cols = [col for col in self.df.columns if col not in ['Date', 'RainTomorrow']]        
+        feature_cols = [col for col in self.df.columns if col not in ['Date', 'RainToday', 'RainTomorrow']]        
         num_features = len(feature_cols)
         all_x = np.empty((0, seq_length, num_features))
         all_y = np.empty((0, target_seq_length, 1))
 
         for _, group in self.df.groupby('Location'):
             group = group.set_index('Date')  # Set date as index
-            values = group[feature_cols + ['RainTomorrow']].to_numpy()
+            values = group[feature_cols + ['RainToday', 'RainTomorrow']].to_numpy()
 
             if len(values) >= (seq_length + target_seq_length - 1):
                 all_data = np.lib.stride_tricks.sliding_window_view(values, seq_length + target_seq_length - 1, axis=0)  # (N, num_features, seq_length+target_seq-1)
                 all_data = np.transpose(all_data, (0, 2, 1)) # (N, seq_length+target_seq-1, num_features)
-                x_data = all_data[:, 0:seq_length, :-1] # (N, seq_length, num_features)
-                y_data = all_data[:, seq_length-1:, -1:] # (N, target_seq_length, 1)
+                x_data = all_data[:, 0:seq_length, :-2] # (N, seq_length, num_features)
+                y_data = all_data[:, seq_length-2:seq_length-1, -1:] # (N, target_seq_length, 1); use the 'RainTomorrow' of previous day as today's 'RainToday'
 
                 all_x = np.concatenate((all_x, x_data), axis=0)
                 all_y = np.concatenate((all_y, y_data), axis=0)
@@ -48,7 +48,7 @@ class DataframeLoader():
     
     def split_df_into_sequences_without_labels(self) -> pd.DataFrame:
         self.df = self.df.sort_values(by=['Location', 'Date'])
-        feature_cols = [col for col in self.df.columns if col not in ['Date']]        
+        feature_cols = [col for col in self.df.columns if col not in ['Date', 'RainTomorrow', 'RainToday']]        
         num_features = len(feature_cols)
         all_x = np.empty((0, seq_length, num_features))
 
@@ -131,7 +131,7 @@ class RainDataset(Dataset):
         if self.y is None:
             return xs
         
-        y = torch.tensor(self.y[index], dtype=torch.float32)
+        y = torch.tensor(self.y[index], dtype=torch.long)
         return xs, y
 
 
@@ -140,17 +140,18 @@ x, y = DataframeLoader("train_and_val").split_df_into_sequences_with_labels()
 x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_split, random_state=42, shuffle=True)
 train_ds = RainDataset(x_train, y_train, "train", activate_undersampling=True, scaler=None)
 val_ds = RainDataset(x_val, y_val, "val", activate_undersampling=False, scaler=train_ds.scaler)
+print(f"Train: {len(train_ds)} samples")
+print(f"Val: {len(val_ds)} samples")
 
 # Test (no labels)
-x = DataframeLoader("test").split_df_into_sequences_without_labels()
-test_ds = RainDataset(x, split = "test", activate_undersampling=False, scaler=train_ds.scaler)
-
-print(f"Train: {len(train_ds)} samples, Val: {len(val_ds)}, Test: {len(test_ds)} samples.")
+# x = DataframeLoader("test").split_df_into_sequences_without_labels()
+# test_ds = RainDataset(x, split = "test", activate_undersampling=False, scaler=train_ds.scaler)
+# print(f"Test: {len(test_ds)} samples.")
 
 torch.manual_seed(24)
 train_dataloader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
 val_dataloader = DataLoader(val_ds, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_ds, batch_size=batch_size, shuffle=True)
+# test_dataloader = DataLoader(test_ds, batch_size=batch_size, shuffle=True)
 
 sample_train_features_batch, sample_train_labels_batch = next(iter(train_dataloader))
 feature_batch_size = sample_train_features_batch.size()
