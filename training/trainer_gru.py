@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import pandas as pd 
 
-from config.config import CONFIG
+from config_custom.config_gru import CONFIG
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

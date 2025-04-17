@@ -5,10 +5,11 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 
 from data.data_processing import DataProcessingPipeline
-from models.gru_classifier import GRU
+from models.gru_models.gru_base import GRU
 
 from training.trainer_gru import train_model
-from config.config import CONFIG
+from config_custom.config_gru import CONFIG
+
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
