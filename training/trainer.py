@@ -1,0 +1,93 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import pandas as pd 
+
+from config_custom.config_lstm import CONFIG
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'], learning_rate=CONFIG['learning_rate']):
+
+    # Defining the Loss Function + Optimizer used
+    ## Loss --> BCE
+    ## Optimizer --> Adam
+
+    criterion = torch.nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    
+    # Create Mini Batch Data.
+    dataset = torch.utils.data.TensorDataset(X_train, Y_train)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    train_losses = []
+    train_accuracies = []
+    
+    for epoch in range(num_epochs):
+
+        model.train() 
+        total_loss = 0
+        correct = 0
+        total = 0
+        
+        for X_batch, Y_batch in dataloader:
+
+            optimizer.zero_grad()
+
+            # Move to GPU if have.
+            X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
+
+            # Forward pass
+            predictions = model(X_batch)[2]
+            
+            # Compute loss
+            loss = criterion(predictions.squeeze(), Y_batch)
+            total_loss += loss.item()
+            
+            # Accuracy Calculation
+            probs = torch.sigmoid(predictions.squeeze())
+
+            # OWN DEFINITION: if probability > 0.5 , gives a value of 1. This means it will RAIN.
+            predicted_labels = (probs >= 0.5).float()
+
+            correct += (predicted_labels == Y_batch).sum().item()
+            total += Y_batch.size(0)
+
+            # Backpropagation
+            loss.backward()
+            optimizer.step()
+        
+        avg_loss = total_loss / len(dataloader)
+        accuracy = correct / total
+
+        train_losses.append(avg_loss)
+        train_accuracies.append(accuracy)
+        
+        print(f"Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}, Accuracy: {correct/total:.4f}")
+        
+        torch.save(model.state_dict(), 'ckpts/lstm/model2_weights.pth')
+    
+    # Plotting after training
+    plt.figure(figsize=(12, 5))
+
+    # Loss Plot
+    plt.subplot(1, 2, 1)
+    plt.plot(train_losses, label='Training Loss', color='red')
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training Loss Over Epochs")
+    plt.grid(True)
+    plt.legend()
+
+    # Accuracy Plot
+    plt.subplot(1, 2, 2)
+    plt.plot(train_accuracies, label='Training Accuracy', color='blue')
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Training Accuracy Over Epochs")
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
