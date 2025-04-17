@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from data.data_processing import DataProcessingPipeline
 from models.seq2seq_gru import Seq2SeqGRU
-from training.trainer_seq2seq import train_seq2seq
+from training.trainer_seq2seq_gru import train_seq2seq
 from config.config import CONFIG
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
