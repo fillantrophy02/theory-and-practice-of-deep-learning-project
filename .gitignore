@@ -132,3 +132,4 @@ logs/
 mlruns/
 mlartifacts/
 tmp/
+visualizations/

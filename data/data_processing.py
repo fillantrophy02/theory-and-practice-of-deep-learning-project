@@ -148,21 +148,21 @@ class DataProcessingPipeline():
         else:
             pass
 
+if __name__ == '__main__':
+    type = "Train"
+    df = pd.read_csv('data/raw-data/train.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean(type)
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/train.csv')
 
-type = "Train"
-df = pd.read_csv('data/raw-data/train.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean(type)
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/train.csv')
-
-type = "Test"
-df = pd.read_csv('data/raw-data/test.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean(type)
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/test.csv')
+    type = "Test"
+    df = pd.read_csv('data/raw-data/test.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean(type)
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/test.csv')
