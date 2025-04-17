@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+import torch
 
 class DataProcessingPipeline():
     def __init__(self, df: pd.DataFrame):
@@ -9,13 +10,19 @@ class DataProcessingPipeline():
         #self._drop_rows_with_na_labels()
         self._rain_today_na(type) #Train
         self._drop_rows_with_na_labels(type)
+    def clean(self, type):
+        #self._drop_rows_with_na_labels()
+        self._rain_today_na(type) #Train
+        self._drop_rows_with_na_labels(type)
         self._transform_categorical_features_to_numerical()
         self._extract_time_series_feature_for_city()
         self._transform_into_multi_index()
         self._drop_columns_with_too_many_missing_values()
         # self._drop_unnecessary_columns()
+        # self._drop_unnecessary_columns()
         self._interpolate_missing_values()
         self._transform_label_to_binary()
+        self._test_rain_tomorrow(type) #Test
         self._test_rain_tomorrow(type) #Test
 
     def get(self) -> pd.DataFrame:
@@ -68,6 +75,11 @@ class DataProcessingPipeline():
             self.df.dropna(subset=['RainToday'], inplace=True)
         else:
             pass
+    def _drop_rows_with_na_labels(self, type):
+        if type == 'Test':
+            self.df.dropna(subset=['RainToday'], inplace=True)
+        else:
+            pass
 
     def _interpolate_missing_values(self):
         self.df.interpolate(inplace=True, limit_direction='both')
@@ -83,7 +95,15 @@ class DataProcessingPipeline():
             self.df['RainToday'] = self.df['RainToday'].map(lambda x: 1 if x == 'Yes' else (0 if x == 'No' else x))
 
         cat_columns = ['Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm']
+
+        if 'RainToday' in self.df.columns:
+            self.df['RainToday'] = self.df['RainToday'].map(lambda x: 1 if x == 'Yes' else (0 if x == 'No' else x))
+
+        cat_columns = ['Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm']
         existing_columns = [col for col in cat_columns if col in self.df.columns]
+
+        for col in existing_columns:
+            self.df[col] = self.df[col].astype('category').cat.codes
 
         for col in existing_columns:
             self.df[col] = self.df[col].astype('category').cat.codes
@@ -148,21 +168,21 @@ class DataProcessingPipeline():
         else:
             pass
 
+if __name__ == '__main__':
+    type = "Train"
+    df = pd.read_csv('data/raw-data/train.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean(type)
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/train.csv')
 
-type = "Train"
-df = pd.read_csv('data/raw-data/train.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean(type)
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/train.csv')
-
-type = "Test"
-df = pd.read_csv('data/raw-data/test.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean(type)
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/test.csv')
+    type = "Test"
+    df = pd.read_csv('data/raw-data/test.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean(type)
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/test.csv')

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import pandas as pd 
 
-from config.config import CONFIG
+from config_custom.config_lstm import CONFIG
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -65,7 +65,7 @@ def train_model(model, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_
         
         print(f"Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}, Accuracy: {correct/total:.4f}")
         
-        torch.save(model.state_dict(), 'model2_weights.pth')
+        torch.save(model.state_dict(), 'ckpts/lstm/model2_weights.pth')
     
     # Plotting after training
     plt.figure(figsize=(12, 5))
