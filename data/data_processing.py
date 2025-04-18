@@ -67,12 +67,13 @@ class DataProcessingPipeline():
 
     def _drop_unnecessary_columns(self):
         columns_to_drop = []
+        columns_to_drop = []
         for col in columns_to_drop:
             if col in self.df.columns:
                 self.df.drop(columns=columns_to_drop, inplace=True)
 
     def _drop_rows_with_na_labels(self):
-        self.df.dropna(subset=['RainToday'], inplace=True)
+        self.df.dropna(subset=['RainTomorrow'], inplace=True)
 
     def _interpolate_missing_values(self):
         self.df.interpolate(inplace=True, limit_direction='both')
@@ -127,22 +128,19 @@ class DataProcessingPipeline():
                 self.df.groupby('Location')['RainToday'].shift(-1)
             )
 
+if __name__ == "__main__":
+    df = pd.read_csv('data/raw-data/train.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean()
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/train.csv')
 
-
-    
-
-df = pd.read_csv('data/raw-data/train.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean()
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/train_pro.csv')
-
-df = pd.read_csv('data/raw-data/test.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean()
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/test_pro.csv')
+    df = pd.read_csv('data/raw-data/test.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean()
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/test.csv')
