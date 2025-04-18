@@ -122,10 +122,10 @@ class TransformerForClassification(nn.Module):
         self.decoder5 = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, dropout=0.5)
         self.decoder6 = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True, dropout=0.5)
         # self.position = InformerSinusoidalPositionalEmbedding(seq_length, embed_dim)
-        self.linear1 = nn.Linear(num_features, embed_dim)
-        self.linear2 = nn.Linear(embed_dim, 512)
-        self.linear3 = nn.Linear(512, 256)
-        self.linear4 = nn.Linear(256, 1)
+        self.linear1 = nn.Linear(num_features, 512)
+        self.linear2 = nn.Linear(512, 256)
+        self.linear3 = nn.Linear(256, 128)
+        self.linear4 = nn.Linear(128, 1)
         self.activation = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
         self.dropout = nn.Dropout()
@@ -136,12 +136,13 @@ class TransformerForClassification(nn.Module):
         # since embed_dim need to be divisible by nheads
         # and our num_features is unfortunately 19
         # need to resize first
-        x = self.dropout(self.linear1(x))
+        x = self.dropout(self.activation(self.linear1(x)))
 
         # src: (batch_size, input_seq_length, embed_dim),
         # need to apply transformer(src)
-        memory = self.encoder1(x)
-        memory = self.encoder2(memory) # (batch_size, input_seq_length, embed_dim)
+        memory = x
+        # memory = self.encoder1(x)
+        # memory = self.encoder2(memory) # (batch_size, input_seq_length, embed_dim)
         # memory = self.encoder3(memory) # (batch_size, input_seq_length, embed_dim)
         # memory = self.encoder4(memory) # (batch_size, input_seq_length, embed_dim)
         # memory = self.encoder5(memory) # (batch_size, input_seq_length, embed_dim)
@@ -160,9 +161,9 @@ class TransformerForClassification(nn.Module):
 
         out_embeddings = memory[:, -1:, :]
         out = self.linear2(out_embeddings) # (batch_size, 1, 1)
-        out = self.activation(out)
+        out = self.dropout(self.activation(out))
         out = self.linear3(out)
-        out = self.activation(out)
+        out = self.dropout(self.activation(out))
         out = self.linear4(out)
         out = self.sigmoid(out)
         return out
