@@ -85,7 +85,7 @@ class DataProcessingPipeline():
         self.df.interpolate(inplace=True, limit_direction='both')
 
     def _extract_time_series_feature_for_city(self):
-        self.df['Date'] = self.df.groupby('Location').cumcount()    
+        self.df['Date'] = self.df.groupby('Location').cumcount() 
         first_two_columns = ['Location', 'Date']    
         self.df = self.df[first_two_columns + [col for col in self.df.columns if col not in first_two_columns]]
 
