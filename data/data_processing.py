@@ -23,6 +23,7 @@ class DataProcessingPipeline():
         self._drop_unnecessary_columns()
         self._interpolate_missing_values()
         self._transform_label_to_binary()
+        self._shift_rain_today_tomorrow()
 
     def get(self) -> pd.DataFrame:
         return self.df
@@ -97,8 +98,28 @@ class DataProcessingPipeline():
 
         if existing_columns:
             for col in existing_columns:
-                self.df[col] = self.df[col].astype('category').cat.codes
-                self.df[col] = self.df[col].replace(-1, self.df[col].max() + 1)  # Replace -1 with the next available number
+                # For rain columns, we want to ensure binary values (0 or 1)
+                if col in ['RainToday', 'RainTomorrow']:
+                    # Map 'Yes'/'No' or any other values to binary
+                    if self.df[col].dtype == 'object':
+                        # If string values like 'Yes'/'No'
+                        self.df[col] = self.df[col].map({'Yes': 1, 'No': 0})
+                    else:
+                        # If already numerical but might have other values
+                        unique_values = sorted(self.df[col].dropna().unique())
+                        if len(unique_values) <= 2:
+                            # If already binary-like, normalize to 0 and 1
+                            value_map = {v: i for i, v in enumerate(unique_values)}
+                            self.df[col] = self.df[col].map(value_map)
+                    
+                    # Fill any remaining NaN with 0 (assuming no rain is the safer default)
+                    self.df[col] = self.df[col].fillna(0).astype(int)
+                else:
+                    # For other categorical columns
+                    self.df[col] = self.df[col].astype('category').cat.codes
+                    # Replace -1 (NaN) with a more appropriate value
+                    if -1 in self.df[col].values:
+                        self.df[col] = self.df[col].replace(-1, self.df[col].max())  # Replace -1 with the next available number
 
         
     def _encode_wind_direction_sin_cos(self):
@@ -127,9 +148,12 @@ class DataProcessingPipeline():
                 self.df.groupby('Location')['RainToday'].shift(-1)
             )
 
+    def _shift_rain_today_tomorrow(self):
+        rain_today = self.df.pop("RainToday")
+        self.df["RainToday"] = rain_today
+        rain_tomorrow = self.df.pop("RainTomorrow")
+        self.df["RainTomorrow"] = rain_tomorrow
 
-
-    
 
 df = pd.read_csv('data/raw-data/train.csv')
 pipeline = DataProcessingPipeline(df)
@@ -137,7 +161,7 @@ pipeline.report()
 pipeline.clean()
 print("\nAfter cleaning ----------------------------------")
 pipeline.report()
-pipeline.export_to_csv('data/processed-data/train_pro.csv')
+pipeline.export_to_csv('data/processed-data/train.csv')
 
 df = pd.read_csv('data/raw-data/test.csv')
 pipeline = DataProcessingPipeline(df)
@@ -145,4 +169,4 @@ pipeline.report()
 pipeline.clean()
 print("\nAfter cleaning ----------------------------------")
 pipeline.report()
-pipeline.export_to_csv('data/processed-data/test_pro.csv')
+pipeline.export_to_csv('data/processed-data/test.csv')
