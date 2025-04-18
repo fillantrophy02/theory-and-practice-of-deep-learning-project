@@ -8,8 +8,8 @@ val_split = 0.2
 batch_size = 512
 num_epochs = 100
 no_of_days = 2
-# excluded_features = ["WindDir3pm_cos", "WindDir3pm_sin", "WindDir9am_cos", "WindDir9am_sin", "WindGustDir_cos", "WindGustDir_sin"]
-excluded_features = []
+excluded_features = ["WindDir3pm_cos", "WindDir3pm_sin", "WindDir9am_cos", "WindDir9am_sin", "WindGustDir_cos", "WindGustDir_sin"]
+# excluded_features = []
 num_features = 19 - len(excluded_features)
 
 embed_dim = 16 # embedding dim
