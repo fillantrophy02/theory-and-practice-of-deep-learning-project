@@ -1,29 +1,28 @@
+import csv
 import pandas as pd
+import numpy as np
 import torch
-import torch
+from sklearn.preprocessing import StandardScaler
 
 class DataProcessingPipeline():
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, city_code_mappings=None):
         self.df = df
+        if city_code_mappings is not None:
+            self.city_code_mappings = city_code_mappings
+        else:
+            self.city_code_mappings = self._get_city_code_mappings()
 
-    def clean(self, type):
-        #self._drop_rows_with_na_labels()
-        self._rain_today_na(type) #Train
-        self._drop_rows_with_na_labels(type)
-    def clean(self, type):
-        #self._drop_rows_with_na_labels()
-        self._rain_today_na(type) #Train
-        self._drop_rows_with_na_labels(type)
+    def clean(self):
+        self._generate_rain_tomorrow_from_today()
+        self._transform_cities_to_codes()
         self._transform_categorical_features_to_numerical()
+        self._encode_wind_direction_sin_cos()
         self._extract_time_series_feature_for_city()
         self._transform_into_multi_index()
         self._drop_columns_with_too_many_missing_values()
-        # self._drop_unnecessary_columns()
-        # self._drop_unnecessary_columns()
+        self._drop_unnecessary_columns()
         self._interpolate_missing_values()
         self._transform_label_to_binary()
-        self._test_rain_tomorrow(type) #Test
-        self._test_rain_tomorrow(type) #Test
 
     def get(self) -> pd.DataFrame:
         return self.df
@@ -54,8 +53,10 @@ class DataProcessingPipeline():
         print(self.df.iloc[:20])
 
     def _transform_into_multi_index(self):
-        self.df.sort_values(by=['row ID'], inplace=True)
-        self.df.drop(columns=['row ID'], inplace=True)
+        if 'row ID' in self.df.columns:
+            self.df.sort_values(by=['row ID'], inplace=True)
+            self.df.drop(columns=['row ID'], inplace=True)
+
         self.df.set_index(['Location', 'Date'], inplace=True)
         self.df.sort_index(inplace=True)
 
@@ -65,21 +66,13 @@ class DataProcessingPipeline():
         self.df.drop(columns=columns_to_drop, inplace=True)
 
     def _drop_unnecessary_columns(self):
-        columns_to_drop = ["RainTomorrow"]
+        columns_to_drop = []
         for col in columns_to_drop:
             if col in self.df.columns:
                 self.df.drop(columns=columns_to_drop, inplace=True)
 
-    def _drop_rows_with_na_labels(self, type):
-        if type == 'Test':
-            self.df.dropna(subset=['RainToday'], inplace=True)
-        else:
-            pass
-    def _drop_rows_with_na_labels(self, type):
-        if type == 'Test':
-            self.df.dropna(subset=['RainToday'], inplace=True)
-        else:
-            pass
+    def _drop_rows_with_na_labels(self):
+        self.df.dropna(subset=['RainToday'], inplace=True)
 
     def _interpolate_missing_values(self):
         self.df.interpolate(inplace=True, limit_direction='both')
@@ -89,100 +82,67 @@ class DataProcessingPipeline():
         first_two_columns = ['Location', 'Date']    
         self.df = self.df[first_two_columns + [col for col in self.df.columns if col not in first_two_columns]]
 
+    def _get_city_code_mappings(self):
+        with open('data/city_codes.csv') as f:
+            reader = csv.reader(f)
+            next(reader)
+            return dict([[row[0], int(row[1])] for row in reader])
+        
+    def _transform_cities_to_codes(self):
+        self.df['Location'] = self.df['Location'].map(lambda x: self.city_code_mappings[x])
+
     def _transform_categorical_features_to_numerical(self):
-
-        if 'RainToday' in self.df.columns:
-            self.df['RainToday'] = self.df['RainToday'].map(lambda x: 1 if x == 'Yes' else (0 if x == 'No' else x))
-
-        cat_columns = ['Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm']
-
-        if 'RainToday' in self.df.columns:
-            self.df['RainToday'] = self.df['RainToday'].map(lambda x: 1 if x == 'Yes' else (0 if x == 'No' else x))
-
-        cat_columns = ['Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm']
+        cat_columns = ['RainToday', 'RainTomorrow']
         existing_columns = [col for col in cat_columns if col in self.df.columns]
 
-        for col in existing_columns:
-            self.df[col] = self.df[col].astype('category').cat.codes
+        if existing_columns:
+            for col in existing_columns:
+                self.df[col] = self.df[col].astype('category').cat.codes
+                self.df[col] = self.df[col].replace(-1, self.df[col].max() + 1)  # Replace -1 with the next available number
 
-        for col in existing_columns:
-            self.df[col] = self.df[col].astype('category').cat.codes
+        
+    def _encode_wind_direction_sin_cos(self):
+        direction_map = {
+            'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,
+            'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+            'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
+            'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
+        }
 
+        wind_columns = ['WindGustDir', 'WindDir9am', 'WindDir3pm']
+        
+        for col in wind_columns:
+            if col in self.df.columns:
+                radians = self.df[col].map(direction_map).apply(np.deg2rad)
+                self.df[f'{col}_sin'] = np.sin(radians)
+                self.df[f'{col}_cos'] = np.cos(radians)
+                self.df.drop(columns=[col], inplace=True)
 
     def _transform_label_to_binary(self):
         pass
 
-    def _rain_today_na(self, type):
-        if type == "Train":
-            for i in range(1, len(self.df)):
-                if pd.isna(self.df.loc[i, "RainToday"]):
-                    self.df.loc[i, "RainToday"] = self.df.loc[i - 1, "RainTomorrow"]
-        else:
-            pass
+    def _generate_rain_tomorrow_from_today(self):
+        if 'RainToday' in self.df.columns and 'RainTomorrow' not in self.df.columns:
+            self.df['RainTomorrow'] = (
+                self.df.groupby('Location')['RainToday'].shift(-1)
+            )
 
-    def prepare_tensor_data(self):
 
-        features_columns = self.df.columns[:-1]
-        target_column = self.df.columns[-1]
 
-        X = self.df[features_columns].values
-        Y = self.df[target_column].values
-
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        Y_tensor = torch.tensor(Y, dtype=torch.float32)
-
-        return X_tensor, Y_tensor
     
-    def create_sequences(self, X, Y, seq_len):
 
-        n_samples = X.shape[0]
-        n_features = X.shape[1]
-        
-        X_seq = []
-        Y_seq = []
-        
-        for i in range(n_samples - seq_len):
-            X_seq.append(X[i:i+seq_len])
-            Y_seq.append(Y[i:i+seq_len])
-        
-        X_seq = torch.stack(X_seq)
-        Y_seq = torch.stack(Y_seq)
-        
-        return X_seq, Y_seq
-    
-    def na_values(self):
-        na_columns = self.df.columns[self.df.isna().any()].tolist()
-        
-        if na_columns:
-            print("Columns with NA values:")
-            for col in na_columns:
-                na_count = self.df[col].isna().sum()
-                print(f"- {col}: {na_count} missing")
-        else:
-            print("No columns have NA vsalues.")
+df = pd.read_csv('data/raw-data/train.csv')
+pipeline = DataProcessingPipeline(df)
+pipeline.report()
+pipeline.clean()
+print("\nAfter cleaning ----------------------------------")
+pipeline.report()
+pipeline.export_to_csv('data/processed-data/train_pro.csv')
 
-    def _test_rain_tomorrow(self, type):
-        # This assumes that in the last data, it will not rain the next day!
-        if type == "Test":
-            self.df['RainTomorrow'] = self.df['RainToday'].shift(-1).fillna(0).astype(int)
-        else:
-            pass
-
-if __name__ == '__main__':
-    type = "Train"
-    df = pd.read_csv('data/raw-data/train.csv')
-    pipeline = DataProcessingPipeline(df)
-    pipeline.report()
-    pipeline.clean(type)
-    print("\nAfter cleaning ----------------------------------")
-    pipeline.report()
-    pipeline.export_to_csv('data/processed-data/train.csv')
-
-    type = "Test"
-    df = pd.read_csv('data/raw-data/test.csv')
-    pipeline = DataProcessingPipeline(df)
-    pipeline.report()
-    pipeline.clean(type)
-    print("\nAfter cleaning ----------------------------------")
-    pipeline.report()
-    pipeline.export_to_csv('data/processed-data/test.csv')
+df = pd.read_csv('data/raw-data/test.csv')
+pipeline = DataProcessingPipeline(df)
+pipeline.report()
+pipeline.clean()
+print("\nAfter cleaning ----------------------------------")
+pipeline.report()
+pipeline.export_to_csv('data/processed-data/test_pro.csv')
