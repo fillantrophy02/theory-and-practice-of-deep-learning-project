@@ -128,22 +128,19 @@ class DataProcessingPipeline():
                 self.df.groupby('Location')['RainToday'].shift(-1)
             )
 
+if __name__ == "__main__":
+    df = pd.read_csv('data/raw-data/train.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean()
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/train.csv')
 
-
-    
-
-df = pd.read_csv('data/raw-data/train.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean()
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/train_pro.csv')
-
-df = pd.read_csv('data/raw-data/test.csv')
-pipeline = DataProcessingPipeline(df)
-pipeline.report()
-pipeline.clean()
-print("\nAfter cleaning ----------------------------------")
-pipeline.report()
-pipeline.export_to_csv('data/processed-data/test_pro.csv')
+    df = pd.read_csv('data/raw-data/test.csv')
+    pipeline = DataProcessingPipeline(df)
+    pipeline.report()
+    pipeline.clean()
+    print("\nAfter cleaning ----------------------------------")
+    pipeline.report()
+    pipeline.export_to_csv('data/processed-data/test.csv')

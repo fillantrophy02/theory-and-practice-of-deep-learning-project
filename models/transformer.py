@@ -8,7 +8,7 @@ from config_custom.config_transformer import *
 from models.transformer_models.model import TransformerForClassification
 from models.transformer_models.eval import evaluate_model
 
-def run_transformer(model):
+def run_transformer():
     model = TransformerForClassification().to(device)
     train_model(model)
     log_model_artifacts(model)
@@ -16,6 +16,7 @@ def run_transformer(model):
     # evaluate_model(model)
 
 def train_model(model):
+    sys.stdout.flush()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     metrics = {
         "auc": torchmetrics.AUROC('binary').to(device),
