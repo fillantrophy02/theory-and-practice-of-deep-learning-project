@@ -1,14 +1,19 @@
 import csv
 import pandas as pd
 import numpy as np
+import torch
+from sklearn.preprocessing import StandardScaler
 
 class DataProcessingPipeline():
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, city_code_mappings=None):
         self.df = df
-        self.city_code_mappings = self._get_city_code_mappings()
+        if city_code_mappings is not None:
+            self.city_code_mappings = city_code_mappings
+        else:
+            self.city_code_mappings = self._get_city_code_mappings()
 
     def clean(self):
-        self._drop_rows_with_na_labels()
+        self._generate_rain_tomorrow_from_today()
         self._transform_cities_to_codes()
         self._transform_categorical_features_to_numerical()
         self._encode_wind_direction_sin_cos()
@@ -48,8 +53,10 @@ class DataProcessingPipeline():
         print(self.df.iloc[:20])
 
     def _transform_into_multi_index(self):
-        self.df.sort_values(by=['row ID'], inplace=True)
-        self.df.drop(columns=['row ID'], inplace=True)
+        if 'row ID' in self.df.columns:
+            self.df.sort_values(by=['row ID'], inplace=True)
+            self.df.drop(columns=['row ID'], inplace=True)
+
         self.df.set_index(['Location', 'Date'], inplace=True)
         self.df.sort_index(inplace=True)
 
@@ -59,6 +66,7 @@ class DataProcessingPipeline():
         self.df.drop(columns=columns_to_drop, inplace=True)
 
     def _drop_unnecessary_columns(self):
+        columns_to_drop = []
         columns_to_drop = []
         for col in columns_to_drop:
             if col in self.df.columns:
@@ -85,13 +93,14 @@ class DataProcessingPipeline():
         self.df['Location'] = self.df['Location'].map(lambda x: self.city_code_mappings[x])
 
     def _transform_categorical_features_to_numerical(self):
-        cat_columns = ['RainToday']
+        cat_columns = ['RainToday', 'RainTomorrow']
         existing_columns = [col for col in cat_columns if col in self.df.columns]
 
         if existing_columns:
             for col in existing_columns:
                 self.df[col] = self.df[col].astype('category').cat.codes
                 self.df[col] = self.df[col].replace(-1, self.df[col].max() + 1)  # Replace -1 with the next available number
+
         
     def _encode_wind_direction_sin_cos(self):
         direction_map = {
@@ -113,13 +122,23 @@ class DataProcessingPipeline():
     def _transform_label_to_binary(self):
         pass
 
+    def _generate_rain_tomorrow_from_today(self):
+        if 'RainToday' in self.df.columns and 'RainTomorrow' not in self.df.columns:
+            self.df['RainTomorrow'] = (
+                self.df.groupby('Location')['RainToday'].shift(-1)
+            )
+
+
+
+    
+
 df = pd.read_csv('data/raw-data/train.csv')
 pipeline = DataProcessingPipeline(df)
 pipeline.report()
 pipeline.clean()
 print("\nAfter cleaning ----------------------------------")
 pipeline.report()
-pipeline.export_to_csv('data/processed-data/train.csv')
+pipeline.export_to_csv('data/processed-data/train_pro.csv')
 
 df = pd.read_csv('data/raw-data/test.csv')
 pipeline = DataProcessingPipeline(df)
@@ -127,4 +146,4 @@ pipeline.report()
 pipeline.clean()
 print("\nAfter cleaning ----------------------------------")
 pipeline.report()
-pipeline.export_to_csv('data/processed-data/test.csv')
+pipeline.export_to_csv('data/processed-data/test_pro.csv')

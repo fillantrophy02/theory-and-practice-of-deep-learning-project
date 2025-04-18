@@ -20,3 +20,6 @@ nhead = 4 # no. of heads
 num_encoder_layers = 6
 num_decoder_layers = 6
 dim_feedforward = 512
+
+
+model = "LSTM"
