@@ -26,20 +26,20 @@ class DataframeLoader():
     
     def split_df_into_sequences_with_labels(self) -> tuple:
         self.df = self.df.sort_values(by=['Location', 'Date'])
-        feature_cols = [col for col in self.df.columns if col not in (['Date', 'RainToday', 'RainTomorrow'] + excluded_features)]        
+        feature_cols = [col for col in self.df.columns if col not in (['Date', 'RainTomorrow'] + excluded_features)]        
         num_features = len(feature_cols)
         all_x = np.empty((0, seq_length, num_features))
         all_y = np.empty((0, target_seq_length, 1))
 
         for _, group in self.df.groupby('Location'):
             group = group.set_index('Date')  # Set date as index
-            values = group[feature_cols + ['RainToday', 'RainTomorrow']].to_numpy()
+            values = group[feature_cols + ['RainTomorrow']].to_numpy()
 
-            if len(values) >= (seq_length + target_seq_length - 1):
-                all_data = np.lib.stride_tricks.sliding_window_view(values, seq_length + target_seq_length - 1, axis=0)  # (N, num_features, seq_length+target_seq-1)
+            if len(values) >= (seq_length):
+                all_data = np.lib.stride_tricks.sliding_window_view(values, seq_length, axis=0)  # (N, num_features, seq_length+target_seq-1)
                 all_data = np.transpose(all_data, (0, 2, 1)) # (N, seq_length+target_seq-1, num_features)
-                x_data = all_data[:, 0:seq_length, :-2] # (N, seq_length, num_features)
-                y_data = all_data[:, seq_length-2:seq_length-1, -1:] # (N, target_seq_length, 1); use the 'RainTomorrow' of previous day as today's 'RainToday'
+                x_data = all_data[:, 0:seq_length, :-1] # (N, seq_length, num_features)
+                y_data = all_data[:, seq_length-1:, -1:] # (N, target_seq_length, 1)
 
                 all_x = np.concatenate((all_x, x_data), axis=0)
                 all_y = np.concatenate((all_y, y_data), axis=0)
