@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 import torch
 from config_custom.config_transformer import *
 import pandas as pd
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 
 
@@ -115,6 +115,16 @@ class RainDataset(Dataset):
         self.x = self.x[balanced_indices]
         self.y = self.y[balanced_indices]
 
+    def get_samples_weight(self):
+        y_flat = self.y.flatten().astype(int)
+        num_label_0 = (y_flat == 0).sum() # only consider 'today' for label
+        num_label_1 = (y_flat == 1).sum()
+        class_sample_count = np.array([num_label_0, num_label_1])
+        weight = 1. / class_sample_count
+        samples_weight = np.array([weight[t] for t in y_flat])
+        samples_weight = torch.from_numpy(samples_weight)
+        return samples_weight
+
     def report(self):
         num_label_0 = (self.y[:, 0, :] == 0).sum() # only consider 'today' for label
         num_label_1 = (self.y[:, 0, :] == 1).sum()
@@ -138,7 +148,7 @@ class RainDataset(Dataset):
 # Train and val
 x, y = DataframeLoader("train_and_val").split_df_into_sequences_with_labels()
 x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_split, random_state=42, shuffle=True)
-train_ds = RainDataset(x_train, y_train, "train", activate_undersampling=True, scaler=None)
+train_ds = RainDataset(x_train, y_train, "train", activate_undersampling=False, scaler=None)
 val_ds = RainDataset(x_val, y_val, "val", activate_undersampling=False, scaler=train_ds.scaler)
 print(f"Train: {len(train_ds)} samples")
 print(f"Val: {len(val_ds)} samples")
@@ -148,8 +158,12 @@ print(f"Val: {len(val_ds)} samples")
 # test_ds = RainDataset(x, split = "test", activate_undersampling=False, scaler=train_ds.scaler)
 # print(f"Test: {len(test_ds)} samples.")
 
+# Ensure each batch has balanced representation of classes
 torch.manual_seed(24)
-train_dataloader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+samples_weight = train_ds.get_samples_weight()
+sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
+
+train_dataloader = DataLoader(train_ds, batch_size=batch_size, sampler=sampler)
 val_dataloader = DataLoader(val_ds, batch_size=batch_size, shuffle=True)
 # test_dataloader = DataLoader(test_ds, batch_size=batch_size, shuffle=True)
 
