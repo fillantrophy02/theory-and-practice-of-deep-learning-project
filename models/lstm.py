@@ -1,16 +1,18 @@
-import pandas as pd
 import torch
-from sklearn.model_selection import train_test_split
+import os, sys
 
-from data.data_processing import DataProcessingPipeline
-from models.lstm_models.lstm_onestep import LSTM_OneStep
-from models.lstm_models.lstm_multistep import LSTM_MultiStep
+from torch.utils.data import DataLoader
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+from data.data_loader import RainDataset 
+
+from models.lstm_model import LSTM
+from models.lstm_dual_model import DualMemoryCellLSTM
+from models.lstm_modulation import ModulationGateLSTM
 
 from training.trainer import train_model
-from training.trainer2 import train_model2
-
 from training.evaluator import evaluate_model
-from training.evaluator2 import evaluate_model2
 
 from config_custom.config_lstm import CONFIG
 
@@ -18,38 +20,83 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def run_lstm():
     
-    # Step 1: Load and preprocess data
-    df = pd.read_csv('data/processed-data/train.csv')
-    data_processed = DataProcessingPipeline(df)
-
-    # Step 3: Split before preparing tensors
-    features = df.iloc[:, :-1]  # all columns except the last
-    labels = df.iloc[:, -1]     # last column is the target
-    X_train_df, X_test_df, Y_train_df, Y_test_df = train_test_split(features, labels, test_size=0.2, random_state=42)
+    # Step 1: Initialize datasets using RainDataset
+    train_ds = RainDataset(
+        "train", 
+        activate_undersampling=True, 
+        scaler=None,
+        seq_length=CONFIG["seq_length"], 
+        target_seq_length=CONFIG["target_seq_length"]
+    )
     
-    # Step 4: Preparing tensors
-    X_train = torch.tensor(X_train_df.values, dtype=torch.float32)
-    Y_train = torch.tensor(Y_train_df.values, dtype=torch.float32) #(batch_size, 1)
-    Y_train = Y_train.unsqueeze(-1)
+    test_ds = RainDataset(
+        "test", 
+        scaler=train_ds.scaler,  # Use the same scaler as training
+        seq_length=CONFIG["seq_length"], 
+        target_seq_length=CONFIG["target_seq_length"]
+    )
+    
+    # Step 2: Create data loaders
+    train_dataloader = DataLoader(
+        train_ds, 
+        batch_size=CONFIG["batch_size"], 
+        shuffle=True
+    )
+    
+    test_dataloader = DataLoader(
+        test_ds, 
+        batch_size=CONFIG["batch_size"], 
+        shuffle=False
+    )
+    
+    # # Print dataset statistics
+    # train_ds.report()
+    # test_ds.report()
+    
+    # Step 3: Initialize model
+    input_size = train_ds.x.shape[2]  # Number of features
 
-    X_test = torch.tensor(X_test_df.values, dtype=torch.float32)
-    Y_test = torch.tensor(Y_test_df.values, dtype=torch.float32) #(batch_size, 1)
-    Y_test = Y_test.unsqueeze(-1) #(batch_size, seq_len, 1)
+    if CONFIG["model"] == 1:
+        model = LSTM(
+            input_size=input_size, 
+            hidden_size=CONFIG["hidden_size"], 
+            output_size=CONFIG["output_size"]
+        ).to(device)
 
-    seq_len = CONFIG['seq_lens']
-    X_train_seq, Y_train_seq = data_processed.create_sequences(X_train, Y_train, seq_len)
-    X_test_seq, Y_test_seq = data_processed.create_sequences(X_test, Y_test, seq_len) 
 
-    # Step 5: Model Initialization 
-    # model1 = LSTM_OneStep(input_size=CONFIG['input_size'], hidden_size=CONFIG['hidden_size'], output_size=CONFIG['output_size'])
-    # train_model(model1, X_train, Y_train, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'])
-    # evaluate_model(model1, X_test, Y_test, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'])
+    elif CONFIG["model"] == 2:
+        model = ModulationGateLSTM(
+            input_size=train_ds.x.shape[2],  # Number of features
+            hidden_size=CONFIG["hidden_size"],
+            output_size=CONFIG["output_size"]
+        ).to(device)
+        
+    elif CONFIG["model"] == 3:
+        model = DualMemoryCellLSTM(
+            input_size=train_ds.x.shape[2],  # Number of features
+            hidden_size=CONFIG["hidden_size"],
+            output_size=CONFIG["output_size"]
+        ).to(device)
+        
+    train_model_flag = True
 
-    model2 = LSTM_MultiStep(input_size=CONFIG['input_size'], hidden_size=CONFIG['hidden_size'], output_size=CONFIG['output_size']).to(device)
-    #train_model2(model2, X_train_seq, Y_train_seq, num_epochs=CONFIG['num_epochs'], batch_size=CONFIG['batch_size'])
-    model2.load_state_dict(torch.load("ckpts/lstm/model2_weights.pth", weights_only=True))
-    evaluate_model2(model2, X_test_seq, Y_test_seq)
+    model_type = CONFIG.get("model")
+    model_weights_path = f"ckpts/lstm/model{model_type}_weights.pth"
+    
+    if os.path.exists(model_weights_path):
+        train_model_flag = False
+    
+    if train_model_flag:
+        train_model(model, train_dataloader, 
+                    num_epochs=CONFIG["num_epochs"],
+                    learning_rate=CONFIG["learning_rate"])
+        
+        torch.save(model.state_dict(), model_weights_path)
+    else:
+        print("Loading pre-trained weights...")
+        model.load_state_dict(torch.load(model_weights_path, map_location=device))
+    
+    evaluate_model(model, test_dataloader)
 
 if __name__ == "__main__":
     run_lstm()
-
