@@ -1,19 +1,22 @@
 import sys
 import torch
 import torchmetrics
-from transformers import PatchTSTConfig, PatchTSTForClassification, EarlyStoppingCallback, Trainer, TrainingArguments, TrainerCallback
 from models.transformer_models.data_loader import train_dataloader
-from models.transformer_models.experiment_recorder import log_model_artifacts, log_model_metric
 from config_custom.config_transformer import *
 from models.transformer_models.model import TransformerForClassification
 from models.transformer_models.eval import evaluate_model
 
-def run_transformer():
+def run_transformer(use_existing_weights = True):
     model = TransformerForClassification().to(device)
-    train_model(model)
-    log_model_artifacts(model)
-    torch.save(model.state_dict(), "ckpts/transformer/model.pth")
-    # evaluate_model(model)
+    print("hello")
+
+    if not use_existing_weights:
+        train_model(model)
+        # log_model_artifacts(model)
+        torch.save(model.state_dict(), "ckpts/transformer/model.pth")
+
+    model.load_state_dict(torch.load("ckpts/transformer/model.pth"))
+    evaluate_model(model)
 
 def train_model(model):
     sys.stdout.flush()
@@ -54,12 +57,12 @@ def train_model(model):
 
         avg_loss = sum(all_losses) / len(all_losses)
         print(f'Loss: {avg_loss:.3f}', end = '    ')
-        log_model_metric("loss", avg_loss, epoch)
+        # log_model_metric("loss", avg_loss, epoch)
 
         for name in metrics:
             value = metrics[name].compute().item()
 
-            log_model_metric(name, value, epoch)
+            # log_model_metric(name, value, epoch)
             print(f'{name}: {value:.3f}', end='    ')
 
             metrics[name].reset()

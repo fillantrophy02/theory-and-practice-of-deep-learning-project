@@ -1,7 +1,7 @@
 # Configurations for model training
 CONFIG = {
     # Shared
-    'input_size': 19,
+    'input_size': 20,
     'hidden_size': 128,
     'output_size': 1,
     'batch_size': 128,

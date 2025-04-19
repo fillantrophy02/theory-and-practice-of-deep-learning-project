@@ -40,7 +40,7 @@ def train_model_dataloader(model, train_dataloader, num_epochs=CONFIG['num_epoch
             outputs = outputs.squeeze(-1)
             predictions = outputs[:, -1].unsqueeze(1)
 
-            loss = criterion(predictions, Y_batch)
+            loss = criterion(predictions.float(), Y_batch.squeeze(1).float())
             loss.backward()
             optimizer.step()
 
@@ -49,7 +49,7 @@ def train_model_dataloader(model, train_dataloader, num_epochs=CONFIG['num_epoch
             probs = torch.sigmoid(predictions.squeeze())
             predicted_labels = (probs >= 0.5).float()
 
-            correct += (predicted_labels == Y_batch.squeeze(1)).sum().item()
+            correct += (predicted_labels == Y_batch.squeeze(1).squeeze(1)).sum().item()
             total += Y_batch.size(0)
 
         epoch_loss = total_loss / len(train_dataloader)

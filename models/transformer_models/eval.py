@@ -2,10 +2,8 @@ import numpy as np
 import torch
 import torchmetrics
 from models.transformer_models.data_loader import val_dataloader
-from models.transformer_models.experiment_recorder import log_model_metric
 from models.transformer_models.metrics import calculate_cm_metrics, plot_and_save_auc_curve, report
 from config_custom.config_transformer import *
-from transformers import PatchTSTConfig, PatchTSTForClassification, EarlyStoppingCallback, Trainer, TrainingArguments, TrainerCallback
 
 from models.transformer_models.model import TransformerForClassification
 
@@ -42,13 +40,13 @@ def evaluate_model(model, epoch=num_epochs-1):
             all_losses.append(loss.item())
     
         avg_loss = sum(all_losses) / len(all_losses)
-        log_model_metric("val_loss", avg_loss, epoch)
+        # log_model_metric("val_loss", avg_loss, epoch)
         print(f'Loss: {avg_loss:.3f}', end = '    ')
 
         for name in metrics:
             value = metrics[name].compute().item()
 
-            log_model_metric(name, value, epoch)
+            # log_model_metric(name, value, epoch)
             print(f'{name}: {value:.3f}', end='    ')
 
             metrics[name].reset()
