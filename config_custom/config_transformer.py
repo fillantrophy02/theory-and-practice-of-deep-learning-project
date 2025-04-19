@@ -1,6 +1,6 @@
 import torch
 
-debug_mode = False
+debug_mode = True
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_split = 0.8
