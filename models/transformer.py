@@ -1,7 +1,6 @@
 import sys
 import torch
 import torchmetrics
-from transformers import PatchTSTConfig, PatchTSTForClassification, EarlyStoppingCallback, Trainer, TrainingArguments, TrainerCallback
 from models.transformer_models.data_loader import train_dataloader
 from config_custom.config_transformer import *
 from models.transformer_models.model import TransformerForClassification
