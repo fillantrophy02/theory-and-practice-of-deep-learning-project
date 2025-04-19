@@ -9,20 +9,37 @@ from config_custom.config_transformer import *
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 
 class DataframeLoader():
-    def __init__(self, split):
+    def __init__(self, split, activate_decomposition = False):
         self.split = split
         if self.split == "train_and_val":
             self.df = self._load_df('train')
         elif self.split == "test":
             self.df = self._load_df('test')
+        if activate_decomposition:
+            self._decompose()
 
     def _load_df(self, split):
         fp = f"data/processed-data/{split}.csv"
         df = pd.read_csv(fp)
         return df
+    
+    def _decompose(self):
+        columns_to_decompose = ["Rainfall", "WindGustSpeed"]
+        self.df = self.df.sort_values(by=['Location', 'Date'])
+        df_copy = self.df.copy()
+        for _, group in df_copy.groupby('Location'):
+            for column in columns_to_decompose:
+                series = group[column].copy()
+                decomposition = seasonal_decompose(series, model='additive', period=7, extrapolate_trend='freq')
+                trend = decomposition.trend
+                self.df.loc[group.index, f"{column}_trend"] = trend
+        self.df.drop(columns=columns_to_decompose, inplace=True)
+        for column in columns_to_decompose:
+            self.df.rename(columns={f"{column}_trend": column}, inplace=True)
     
     def split_df_into_sequences_with_labels(self) -> tuple:
         self.df = self.df.sort_values(by=['Location', 'Date'])
@@ -146,7 +163,7 @@ class RainDataset(Dataset):
 
 
 # Train and val
-x, y = DataframeLoader("train_and_val").split_df_into_sequences_with_labels()
+x, y = DataframeLoader("train_and_val", activate_decomposition=True).split_df_into_sequences_with_labels()
 x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_split, random_state=42, shuffle=True)
 train_ds = RainDataset(x_train, y_train, "train", activate_undersampling=False, scaler=None)
 val_ds = RainDataset(x_val, y_val, "val", activate_undersampling=False, scaler=train_ds.scaler)
