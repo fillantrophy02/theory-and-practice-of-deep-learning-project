@@ -1,1 +1,1 @@
-model = "Transformer"
+model = "GRU"

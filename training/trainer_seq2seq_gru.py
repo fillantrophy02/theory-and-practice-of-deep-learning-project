@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
+import os
 
-def train_seq2seq(model, dataloader, num_epochs, learning_rate, device, pos_weight):
+
+def train_seq2seq(model, train_dataloader, num_epochs, learning_rate, device, pos_weight):
     model.train()
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(device))
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -9,12 +11,15 @@ def train_seq2seq(model, dataloader, num_epochs, learning_rate, device, pos_weig
     epoch_losses = []
     epoch_accuracies = []
 
+    save_path = "ckpts/gru/model_weights_seq2seq.pth"
+    os.makedirs("ckpts/gru", exist_ok=True)
+
     for epoch in range(num_epochs):
         total_loss = 0
         correct = 0
         total = 0
 
-        for X_batch, Y_batch in dataloader:
+        for X_batch, Y_batch in train_dataloader:
             X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
             optimizer.zero_grad()
 
@@ -31,9 +36,14 @@ def train_seq2seq(model, dataloader, num_epochs, learning_rate, device, pos_weig
             optimizer.step()
 
         accuracy = correct / total
-        epoch_losses.append(total_loss / len(dataloader))
+        epoch_losses.append(total_loss / len(train_dataloader))
         epoch_accuracies.append(accuracy)
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_losses[-1]:.4f}, Accuracy: {accuracy:.4f}")
+
+        #  Save final model on last epoch
+        if epoch == num_epochs - 1:
+            torch.save(model.state_dict(), save_path)
+            print(" Final Seq2Seq model saved.")
 
     return epoch_losses, epoch_accuracies

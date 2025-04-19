@@ -1,5 +1,5 @@
-from models.encoder_gru_seq2seq import EncoderGRU
-from models.decoder_gru_seq2seq import DecoderGRU
+from models.gru_models.encoder_gru_seq2seq import EncoderGRU
+from models.gru_models.decoder_gru_seq2seq import DecoderGRU
 import torch.nn as nn
 
 class Seq2SeqGRU(nn.Module):

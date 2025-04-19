@@ -1,53 +1,24 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
-import pandas as pd 
+import torch.nn as nn
 
-# Define the model parameters
-# Input Size : Number of features (22)
-# Hidden_Size : 64
-# Output_Size: 1
-
-class GRU(torch.nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+class GRU(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, dropout=0.0, num_layers=1):
         super(GRU, self).__init__()
-        self.input_size = input_size
         self.hidden_size = hidden_size
-        self.output_size = output_size
 
-        # Parameters for the reset gate
-        self.Wr = torch.nn.Parameter(torch.randn(input_size, hidden_size))
-        self.Ur = torch.nn.Parameter(torch.randn(hidden_size, hidden_size))
-        self.br = torch.nn.Parameter(torch.zeros(hidden_size))
-        # Parameters for the update gate
-        self.Wz = torch.nn.Parameter(torch.randn(input_size, hidden_size))
-        self.Uz = torch.nn.Parameter(torch.randn(hidden_size, hidden_size))
-        self.bz = torch.nn.Parameter(torch.zeros(hidden_size))
-        # Parameters for the candidate hidden state
-        self.W = torch.nn.Parameter(torch.randn(input_size, hidden_size))
-        self.U = torch.nn.Parameter(torch.randn(hidden_size, hidden_size))
-        self.bc = torch.nn.Parameter(torch.zeros(hidden_size))
+        self.gru = nn.GRU(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0.0
+        )
+        self.fc = nn.Linear(hidden_size, output_size)
 
-        # Parameters for the output prediction
-        self.V = torch.nn.Parameter(torch.randn(hidden_size, 1))
-        self.bo = torch.nn.Parameter(torch.randn(1))
-
-    def forward(self, inputs, hidden):
-        # Compute the reset gate
-        reset_gate = torch.sigmoid(torch.matmul(inputs, self.Wr) + torch.matmul(hidden, self.Ur) + self.br)
-        # Compute the update gate
-        update_gate = torch.sigmoid(torch.matmul(inputs, self.Wz) + torch.matmul(hidden, self.Uz) + self.bz)
-
-        # Compute the candidate hidden state
-        candidate_hidden = torch.tanh(torch.matmul(inputs, self.W) + torch.matmul(reset_gate * hidden, self.U) + self.bc)
-        # Compute the updated hidden state
-        new_hidden = (1 - update_gate) * hidden + update_gate * candidate_hidden
-
-        # Compute the output
-        output = torch.matmul(new_hidden, self.V).squeeze(1) + self.bo  # [batch_size]
-
-
-        return new_hidden, output
-
-
-
+    def forward(self, inputs, hidden=None):
+        # inputs: (batch_size, seq_len, input_size)
+        # hidden: (num_layers, batch_size, hidden_size) or None
+        out, hidden = self.gru(inputs, hidden)  # out: (batch_size, seq_len, hidden_size)
+        out = self.fc(out)  # Apply final layer to each time step → (batch_size, seq_len, output_size)
+        out = out.squeeze(-1)  # Remove last dim if output_size is 1 → (batch_size, seq_len)
+        return hidden[-1], out  # Return final hidden state and predictions
