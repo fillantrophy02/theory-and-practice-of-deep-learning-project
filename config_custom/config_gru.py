@@ -11,6 +11,6 @@ CONFIG = {
     # Seq2Seq only
     'sequence_length': 10,
     'future_steps': 5,
-    'num_layers': 1,
+    'num_layers': 2,
     'dropout': 0.2
 }
