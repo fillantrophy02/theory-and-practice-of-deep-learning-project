@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from config import *
 from data.data_processing import DataProcessingPipeline
 from statsmodels.tsa.seasonal import seasonal_decompose
+import seaborn as sns
 
 def visualize_features(columns: list[str], location_code: int = 0, no_of_days: int = 100, type_of_data: str = "processed", is_decomposed: bool = False):
     # Load data
@@ -143,17 +144,32 @@ def visualize_decomposed_features(columns: list[str], location_code: int = 0, no
         plt.savefig(filename)
         plt.close()
 
-columns = [
-    "MinTemp", "MaxTemp", "Rainfall",
-    "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm",
-    "Humidity9am", "Humidity3pm",
-    "Pressure9am", "Pressure3pm",
-    "Temp9am", "Temp3pm",
-    "WindGustDir_sin", "WindGustDir_cos",
-    "WindDir9am_sin", "WindDir9am_cos",
-    "WindDir3pm_sin", "WindDir3pm_cos"
-]
+def plot_correlation_heatmap(columns, type_of_data="raw"):
+    df = pd.read_csv(f"data/{type_of_data}-data/train.csv")
+    columns = [col for col in columns if col in df.columns]
+    columns.extend(["Location", "Date", "RainToday", "RainTomorrow"])
+    df = df[columns]
+    corr_matrix = df.corr(numeric_only=True)
 
-for column in columns:
-    visualize_features(columns=columns[:5], type_of_data="raw")
-    # visualize_decomposed_features([column], type_of_data="processed")
+    plt.figure(figsize=(20,20))
+    sns.heatmap(corr_matrix, cmap="YlGnBu", annot=True)
+    os.makedirs("visualizations", exist_ok=True)
+    filename = f"visualizations/heatmap.png"
+    plt.savefig(filename)
+    plt.close()
+
+if __name__ == "__main__":
+    columns = [
+        "MinTemp", "MaxTemp", "Rainfall",
+        "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm",
+        "Humidity9am", "Humidity3pm",
+        "Pressure9am", "Pressure3pm",
+        "Temp9am", "Temp3pm",
+        "WindGustDir_sin", "WindGustDir_cos",
+        "WindDir9am_sin", "WindDir9am_cos",
+        "WindDir3pm_sin", "WindDir3pm_cos"
+    ]
+    for column in columns:
+        plot_correlation_heatmap(columns=columns, type_of_data="processed")
+        # visualize_features(columns=columns[:5], type_of_data="processed")
+        # visualize_decomposed_features([column], type_of_data="processed")
