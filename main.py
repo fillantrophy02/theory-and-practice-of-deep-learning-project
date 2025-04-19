@@ -4,7 +4,7 @@ from models.transformer import run_transformer
 from models.gru import run_gru
 
 if model == "LSTM":
-    run_lstm()
+    run_lstm(use_existing_weights)
 elif model == "GRU":
     run_gru()
 elif model == "Transformer":

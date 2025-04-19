@@ -8,12 +8,14 @@ from config_custom.config_transformer import *
 from models.transformer_models.model import TransformerForClassification
 from models.transformer_models.eval import evaluate_model
 
-def run_transformer(use_existing_weights):
+def run_transformer(use_existing_weights = True):
     model = TransformerForClassification().to(device)
     if not use_existing_weights:
         train_model(model)
         log_model_artifacts(model)
         torch.save(model.state_dict(), "ckpts/transformer/model.pth")
+
+    model.load_state_dict(torch.load("ckpts/transformer/model.pth"))
     evaluate_model(model)
 
 def train_model(model):

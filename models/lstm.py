@@ -18,7 +18,7 @@ from config_custom.config_lstm import CONFIG
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def run_lstm():
+def run_lstm(use_existing_weights = True):
     
     # Step 1: Initialize datasets using RainDataset
     train_ds = RainDataset(
@@ -83,7 +83,7 @@ def run_lstm():
     model_type = CONFIG.get("model")
     model_weights_path = f"ckpts/lstm/model{model_type}_weights.pth"
     
-    if os.path.exists(model_weights_path):
+    if use_existing_weights and os.path.exists(model_weights_path):
         train_model_flag = False
     
     if train_model_flag:

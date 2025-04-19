@@ -11,7 +11,7 @@ from config_custom.config_gru import CONFIG
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def run_gru():
+def run_gru(use_existing_weights = True):
     # 1. Load and split data
     x, y = DataframeLoader("train").split_df_into_sequences_with_labels()
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=42, shuffle=True)
@@ -38,18 +38,19 @@ def run_gru():
     print(" Model is on:", next(model.parameters()).device)
 
     # 4. Train model
-    losses, accuracies = train_model_dataloader(
-    model=model,
-    train_dataloader=train_dl,
-    num_epochs=CONFIG['num_epochs'],
-    learning_rate=CONFIG['learning_rate']
-    )
+    if not use_existing_weights:
+        losses, accuracies = train_model_dataloader(
+        model=model,
+        train_dataloader=train_dl,
+        num_epochs=CONFIG['num_epochs'],
+        learning_rate=CONFIG['learning_rate']
+        )
 
 
-    print(" Training complete.")
+        print(" Training complete.")
 
-    # 5. Save final weights
-    torch.save(model.state_dict(), "ckpts/gru/model_weights_last.pth")
+        # 5. Save final weights
+        torch.save(model.state_dict(), "ckpts/gru/model_weights_last.pth") # Change this to 'gru' to retrain
 
     # 6. Load best model from early stopping (if available)
     best_weights_path = "ckpts/gru/model_weights_gru.pth"
