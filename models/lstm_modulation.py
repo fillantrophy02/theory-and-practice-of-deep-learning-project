@@ -47,16 +47,19 @@ class ModulationGateLSTM(torch.nn.Module):
 
             forget_gate = torch.sigmoid(self.Wf(combined))
             input_gate = torch.sigmoid(self.Wi(combined))
+
+            # MODIFICATION
+            modulation_gate = torch.sigmoid(self.Wm(combined))
+
             output_gate = torch.sigmoid(self.Wo(combined))
             candidate_cell = torch.tanh(self.Wc(combined))
 
             cell_state = forget_gate * cell_state + input_gate * candidate_cell
 
             # MODIFICATION
-            modulation_gate = torch.sigmoid(self.Wm(combined))
             modulated_cell = modulation_gate * torch.tanh(cell_state)
 
-            hidden_state = output_gate * torch.tanh(cell_state)
+            hidden_state = output_gate * modulated_cell
 
             output = self.V(hidden_state)  # shape: (batch_size, output_size)
             outputs.append(output.unsqueeze(1))  # (batch_size, 1, output_size)

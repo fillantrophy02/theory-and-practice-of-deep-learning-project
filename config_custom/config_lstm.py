@@ -15,5 +15,5 @@ CONFIG = {
         # 1: Normal LSTM
         # 2: Modulation Gate LSTM
         # 3: Dual Memory LSTM
-    'model': 1
+    'model': 2
 }
