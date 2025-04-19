@@ -17,7 +17,7 @@ def run_transformer():
 
 def train_model(model):
     sys.stdout.flush()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     metrics = {
         "auc": torchmetrics.AUROC('binary').to(device),
         "f1_score": torchmetrics.F1Score('binary').to(device),

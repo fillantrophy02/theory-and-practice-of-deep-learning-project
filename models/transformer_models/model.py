@@ -22,7 +22,7 @@ class SelfAttentionLayer(nn.Module):
 
         product = torch.bmm(query, key.transpose(1, 2))/(embed_dim**0.5) # (n, s, s)
         attention_weights = F.softmax(product, dim = 2) # (n, s, s)
-        out = torch.bmm(attention_weights, value) # (n, s, e)
+        out = torch.bmm(attention_weights, x) # (n, s, e)
         return out
     
 class EncoderLayer(nn.Module):
