@@ -1,3 +1,1 @@
-
-
-model = "LSTM"
+model = "Transformer"
