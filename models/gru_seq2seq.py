@@ -54,7 +54,9 @@ def main():
     with torch.no_grad():
         for X_batch, Y_batch in val_dl:
             X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
-            logits = model(X_batch, Y_batch.size(1)).squeeze()
+            Y_batch = Y_batch.unsqueeze(-1)  # Make sure shape is [batch, future_steps, 1]
+            logits = model(X_batch, target_seq=None, teacher_forcing_ratio=0.0).squeeze()
+
             probs = torch.sigmoid(logits)
             preds = (probs >= 0.5).float()
 

@@ -57,12 +57,14 @@ class DataframeLoader():
             for i in range(len(features) - CONFIG['sequence_length'] - future_steps + 1):
                 x_seq = features[i:i + CONFIG['sequence_length']]
                 y_seq = labels[i + CONFIG['sequence_length']:i + CONFIG['sequence_length'] + future_steps]
+                y_seq = np.expand_dims(y_seq, axis=1)  # 👈 Add this to keep (T, 1) shape
                 all_x.append(x_seq)
                 all_y.append(y_seq)
 
         print(" Using features:", self.feature_cols)
         print(" Final x shape:", np.array(all_x).shape)
         return np.array(all_x), np.array(all_y)
+
 
 class RainDataset(Dataset):
     def __init__(self, x, y, normalize=True, scaler=None):
@@ -91,7 +93,8 @@ class RainDataset(Dataset):
     def __getitem__(self, idx):
         return (
             torch.tensor(self.x[idx], dtype=torch.float32),
-            torch.tensor(self.y[idx], dtype=torch.float32)
+            torch.tensor(self.y[idx], dtype=torch.float32).squeeze()
+
         )
 
 
