@@ -10,19 +10,27 @@ import torch.nn.functional as F
 class SelfAttentionLayer(nn.Module):
     def __init__(self):
         super(SelfAttentionLayer, self).__init__()
-        self.query = nn.Linear(embed_dim, embed_dim)
-        self.key = nn.Linear(embed_dim, embed_dim)
-        self.value = nn.Linear(embed_dim, embed_dim)
+        self.embed_dim = 512
+        self.query = nn.Linear(self.embed_dim, self.embed_dim)
+        self.key = nn.Linear(self.embed_dim, self.embed_dim)
+        self.value = nn.Linear(self.embed_dim, self.embed_dim)
+        self.linear1 = nn.Linear(embed_dim, self.embed_dim)
+        self.linear2 = nn.Linear(self.embed_dim, embed_dim)
+        self.activation = nn.ReLU()
 
     def forward(self, x): # (n, s, e)
-        batch_size = x.size(0)
-        query = self.query(x).view(batch_size, -1, embed_dim) # (n, s, e)
-        key = self.key(x).view(batch_size, -1, embed_dim) # (n, s, e)
-        value = self.value(x).view(batch_size, -1, embed_dim) # (n, s, e)
+        x = self.activation(self.linear1(x))
 
-        product = torch.bmm(x, key.transpose(1, 2))/(embed_dim**0.5) # (n, s, s)
+        batch_size = x.size(0)
+        query = self.query(x).view(batch_size, -1, self.embed_dim) # (n, s, e)
+        key = self.key(x).view(batch_size, -1, self.embed_dim) # (n, s, e)
+        value = self.value(x).view(batch_size, -1, self.embed_dim) # (n, s, e)
+
+        product = torch.bmm(query, key.transpose(1, 2))/(self.embed_dim**0.5) # (n, s, s)
         attention_weights = F.softmax(product, dim = 2) # (n, s, s)
         out = torch.bmm(attention_weights, value) # (n, s, e)
+
+        out = self.activation(self.linear2(x))
         return out
     
 class EncoderLayer(nn.Module):
