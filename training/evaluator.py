@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import numpy as np
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_auc_score
 
 def evaluate_model(model, test_dataloader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,7 +32,7 @@ def evaluate_model(model, test_dataloader):
             _, _, outputs = model(inputs)
             
             # Calculate loss
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs.float(), targets.float())
             
             # Statistics
             running_loss += loss.item() * inputs.size(0)
@@ -60,6 +60,7 @@ def evaluate_model(model, test_dataloader):
     recall = recall_score(all_targets, all_predictions, average='binary', zero_division=0)
     f1 = f1_score(all_targets, all_predictions, average='binary', zero_division=0)
     cm = confusion_matrix(all_targets, all_predictions)
+    auc = roc_auc_score(all_targets, all_predictions)
     
     # Print results
     print(f"\nEvaluation Results:")
@@ -68,6 +69,7 @@ def evaluate_model(model, test_dataloader):
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F1 Score: {f1:.4f}")
+    print(f"AUC: {auc:.4f}")
     print("\nConfusion Matrix:")
     print(cm)
     

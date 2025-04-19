@@ -10,6 +10,7 @@ from data.data_loader import RainDataset
 from models.lstm_model import LSTM
 from models.lstm_dual_model import DualMemoryCellLSTM
 from models.lstm_modulation import ModulationGateLSTM
+from models.transformer_models.data_loader import train_dataloader, val_dataloader
 
 from training.trainer import train_model
 from training.evaluator import evaluate_model
@@ -20,41 +21,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def run_lstm(use_existing_weights = True):
     
-    # Step 1: Initialize datasets using RainDataset
-    train_ds = RainDataset(
-        "train", 
-        activate_undersampling=True, 
-        scaler=None,
-        seq_length=CONFIG["seq_length"], 
-        target_seq_length=CONFIG["target_seq_length"]
-    )
-    
-    test_ds = RainDataset(
-        "test", 
-        scaler=train_ds.scaler,  # Use the same scaler as training
-        seq_length=CONFIG["seq_length"], 
-        target_seq_length=CONFIG["target_seq_length"]
-    )
-    
-    # Step 2: Create data loaders
-    train_dataloader = DataLoader(
-        train_ds, 
-        batch_size=CONFIG["batch_size"], 
-        shuffle=True
-    )
-    
-    test_dataloader = DataLoader(
-        test_ds, 
-        batch_size=CONFIG["batch_size"], 
-        shuffle=False
-    )
-    
     # # Print dataset statistics
     # train_ds.report()
     # test_ds.report()
     
     # Step 3: Initialize model
-    input_size = train_ds.x.shape[2]  # Number of features
+    input_size = 20
 
     if CONFIG["model"] == 1:
         model = LSTM(
@@ -66,14 +38,14 @@ def run_lstm(use_existing_weights = True):
 
     elif CONFIG["model"] == 2:
         model = ModulationGateLSTM(
-            input_size=train_ds.x.shape[2],  # Number of features
+            input_size=input_size,  # Number of features
             hidden_size=CONFIG["hidden_size"],
             output_size=CONFIG["output_size"]
         ).to(device)
         
     elif CONFIG["model"] == 3:
         model = DualMemoryCellLSTM(
-            input_size=train_ds.x.shape[2],  # Number of features
+            input_size=input_size,  # Number of features
             hidden_size=CONFIG["hidden_size"],
             output_size=CONFIG["output_size"]
         ).to(device)
@@ -96,7 +68,7 @@ def run_lstm(use_existing_weights = True):
         print("Loading pre-trained weights...")
         model.load_state_dict(torch.load(model_weights_path, map_location=device))
     
-    evaluate_model(model, test_dataloader)
+    evaluate_model(model, test_dataloader=val_dataloader)
 
 if __name__ == "__main__":
     run_lstm()

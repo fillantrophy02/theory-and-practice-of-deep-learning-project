@@ -49,7 +49,7 @@ def train_model(model, train_dataloader, num_epochs=10, learning_rate=0.001):
             
             # Forward pass
             _, _, outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs.float(), targets.float())
             
             # Backward pass and optimize
             loss.backward()
