@@ -91,6 +91,9 @@ def visualize_decomposed_features(columns: list[str], location_code: int = 0, no
     # Sort by Date (integer time step) and limit to no_of_days
     df = df.sort_values("Date").head(no_of_days)
     df["Date"] = pd.to_datetime(df["Date"], unit='D', origin='unix')  # Convert to datetime
+    df["TimeIndex"] = df.index
+    df.index.name = "Date"
+    lst = list(range(no_of_days))
 
     for col in columns:
         # Min-max scale selected column
@@ -100,7 +103,7 @@ def visualize_decomposed_features(columns: list[str], location_code: int = 0, no
 
         # Decompose the time series
         try:
-            decomposition = seasonal_decompose(series, model='additive', period=4, extrapolate_trend='freq')
+            decomposition = seasonal_decompose(series, model='additive', period=7, extrapolate_trend='freq')
         except ValueError as e:
             print(f"Skipping column {col}: {e}")
             continue
@@ -108,19 +111,19 @@ def visualize_decomposed_features(columns: list[str], location_code: int = 0, no
         # Plot the decomposed components
         fig, axs = plt.subplots(5, 1, figsize=(15, 10), sharex=True)
 
-        axs[0].plot(df["Date"], series, label=f"{col} (Normalized)", color='blue')
+        axs[0].plot(lst, series, label=f"{col} (Normalized)", color='blue')
         axs[0].set_ylabel("Observed")
         axs[0].legend(loc='upper left')
 
-        axs[1].plot(df["Date"], decomposition.trend, label="Trend", color='green')
+        axs[1].plot(lst, decomposition.trend, label="Trend", color='green')
         axs[1].set_ylabel("Trend")
         axs[1].legend(loc='upper left')
 
-        axs[2].plot(df["Date"], decomposition.seasonal, label="Seasonal", color='purple')
+        axs[2].plot(lst, decomposition.seasonal, label="Seasonal", color='purple')
         axs[2].set_ylabel("Seasonal")
         axs[2].legend(loc='upper left')
 
-        axs[3].plot(df["Date"], decomposition.resid, label="Residual", color='red')
+        axs[3].plot(lst, decomposition.resid, label="Residual", color='red')
         axs[3].set_ylabel("Residual")
         axs[3].legend(loc='upper left')
 
@@ -155,6 +158,7 @@ def plot_correlation_heatmap(columns, type_of_data="raw"):
     sns.heatmap(corr_matrix, cmap="YlGnBu", annot=True)
     os.makedirs("visualizations", exist_ok=True)
     filename = f"visualizations/heatmap.png"
+    plt.tight_layout()
     plt.savefig(filename)
     plt.close()
 
@@ -169,7 +173,7 @@ if __name__ == "__main__":
         "WindDir9am_sin", "WindDir9am_cos",
         "WindDir3pm_sin", "WindDir3pm_cos"
     ]
-    for column in columns:
-        plot_correlation_heatmap(columns=columns, type_of_data="processed")
+    # for column in columns:
+        # plot_correlation_heatmap(columns=columns, type_of_data="processed")
         # visualize_features(columns=columns[:5], type_of_data="processed")
-        # visualize_decomposed_features([column], type_of_data="processed")
+    visualize_decomposed_features(["Rainfall", "WindGustSpeed"], type_of_data="processed", no_of_days=100)
